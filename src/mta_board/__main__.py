@@ -12,6 +12,13 @@ from .service import BoardService
 from .web import serve_preview
 
 
+def _add_scroll_toggle(parser: argparse.ArgumentParser) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--scroll", dest="scrolling", action="store_true", help="scroll long text")
+    group.add_argument("--no-scroll", dest="scrolling", action="store_false", help="truncate long text")
+    parser.set_defaults(scrolling=None)
+
+
 def _add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", default="config.toml", help="TOML configuration file")
     parser.add_argument("--station", help="base GTFS station ID, e.g. R05")
@@ -19,6 +26,7 @@ def _add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--direction", choices=("N", "S", "n", "s"))
     parser.add_argument("--minimum-lead", type=int, help="hide trains arriving sooner than this")
     parser.add_argument("--demo", action="store_true", help="use deterministic sample arrivals")
+    _add_scroll_toggle(parser)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--routes", help="comma-separated routes, e.g. N,W")
     configure.add_argument("--direction", choices=("N", "S", "n", "s"))
     configure.add_argument("--minimum-lead", type=int, help="hide trains arriving sooner than this")
+    _add_scroll_toggle(configure)
 
     preview = subparsers.add_parser("preview", help="run the browser-based virtual board")
     _add_common(preview)
@@ -110,6 +119,7 @@ def _print_config(config: AppConfig, path: str) -> None:
     print(f"  Routes:   {', '.join(config.board.routes)}")
     print(f"  Direction {config.board.direction}: {direction_label or 'Last stop'}")
     print(f"  Lead time: {config.board.minimum_lead_minutes} min")
+    print(f"  Scrolling: {'on' if config.display.scrolling else 'off'}")
 
 
 def _canonical_route(route: str, station: Station) -> str:
@@ -130,7 +140,13 @@ def configure_board(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     changing = any(
         value is not None
-        for value in (args.station, args.routes, args.direction, args.minimum_lead)
+        for value in (
+            args.station,
+            args.routes,
+            args.direction,
+            args.minimum_lead,
+            getattr(args, "scrolling", None),
+        )
     )
     if not changing:
         _print_config(config, args.config)

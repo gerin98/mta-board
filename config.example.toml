@@ -21,3 +21,5 @@ height = 32
 brightness = 25
 # Zero is normally appropriate for an original Pi Zero W. Tune if needed.
 gpio_slowdown = 0
+# Scroll long station/direction and destination text instead of truncating it.
+scrolling = true

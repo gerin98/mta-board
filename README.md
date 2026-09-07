@@ -31,12 +31,14 @@ The preview opens at <http://127.0.0.1:8000>. It downloads the official static M
 | --- | --- | --- |
 | `stations` | Search stations by name, ID, borough, route, or direction | `mta-board stations "59 lex 6"` |
 | `lines` | Search routes and their MTA corridors | `mta-board lines Lexington` |
-| `configure` | Show or persist the default station, routes, and direction | `mta-board configure --station 629 --routes 6 --direction S` |
+| `configure` | Persist the station, routes, direction, and scrolling preference | `mta-board configure --station 629 --routes 6 --direction S` |
 | `preview` | Run the live browser preview; flags are temporary overrides | `mta-board preview --station R09 --routes N,W --direction S` |
 | `snapshot` | Save one 128×32 PNG frame | `mta-board snapshot --demo --output preview.png` |
 | `run` | Drive the physical HUB75 matrix | `sudo mta-board run --renderer matrix` |
 
 Run `mta-board COMMAND --help` for all options. Commands use `config.toml` by default; pass `--config PATH` to `configure`, `preview`, `snapshot`, or `run` to use another file.
+
+Long headers and destinations pause, scroll to the end, pause, and repeat. Persistently disable or enable the marquee with `mta-board configure --no-scroll` or `mta-board configure --scroll`; use the same flags with `preview` for a temporary override.
 
 To test without network access:
 

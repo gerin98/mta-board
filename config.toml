@@ -15,3 +15,4 @@ width = 128
 height = 32
 brightness = 25
 gpio_slowdown = 0
+scrolling = true

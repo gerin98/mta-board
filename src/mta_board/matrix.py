@@ -27,10 +27,9 @@ def run_matrix(service: BoardService, config: AppConfig) -> None:
     try:
         while True:
             matrix.SetImage(service.frame().convert("RGB"))
-            time.sleep(1)
+            time.sleep(1 / 12)
     except KeyboardInterrupt:
         pass
     finally:
         matrix.Clear()
         service.stop()
-

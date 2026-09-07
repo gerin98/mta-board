@@ -34,6 +34,7 @@ class DisplayConfig:
     height: int = 32
     brightness: int = 25
     gpio_slowdown: int = 0
+    scrolling: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +48,13 @@ def _integer(data: dict, name: str, default: int) -> int:
     value = data.get(name, default)
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{name} must be an integer")
+    return value
+
+
+def _boolean(data: dict, name: str, default: bool) -> bool:
+    value = data.get(name, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{name} must be true or false")
     return value
 
 
@@ -83,6 +91,7 @@ def load_config(path: str | Path) -> AppConfig:
             height=_integer(display_data, "height", 32),
             brightness=_integer(display_data, "brightness", 25),
             gpio_slowdown=_integer(display_data, "gpio_slowdown", 0),
+            scrolling=_boolean(display_data, "scrolling", True),
         ),
     )
     validate_config(config)
@@ -111,6 +120,7 @@ width = {config.display.width}
 height = {config.display.height}
 brightness = {config.display.brightness}
 gpio_slowdown = {config.display.gpio_slowdown}
+scrolling = {str(config.display.scrolling).lower()}
 '''
     temporary_path = config_path.with_name(f".{config_path.name}.tmp")
     try:
@@ -122,6 +132,7 @@ gpio_slowdown = {config.display.gpio_slowdown}
 
 def apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
     board = config.board
+    display = config.display
     if getattr(args, "station", None):
         board = replace(board, station_id=args.station.upper())
     if getattr(args, "routes", None):
@@ -131,7 +142,9 @@ def apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
         board = replace(board, direction=args.direction.upper())
     if getattr(args, "minimum_lead", None) is not None:
         board = replace(board, minimum_lead_minutes=args.minimum_lead)
-    updated = replace(config, board=board)
+    if getattr(args, "scrolling", None) is not None:
+        display = replace(display, scrolling=args.scrolling)
+    updated = replace(config, board=board, display=display)
     validate_config(updated)
     return updated
 

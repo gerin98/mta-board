@@ -35,6 +35,10 @@ HEADER_ABBREVIATIONS = {
     "QUEENSBORO": "QNSBORO",
     "UPTOWN": "UPTWN",
 }
+SCROLL_PIXELS_PER_SECOND = 12
+SCROLL_START_PAUSE_SECONDS = 5
+SCROLL_END_PAUSE_SECONDS = 2
+HEADER_GAP = 4
 
 # Fixed 5x7 bitmap glyphs keep every character aligned to the LED grid. Using
 # Pillow's default font here would allow different Pillow versions to select
@@ -160,6 +164,59 @@ def _draw_mini_text(
         glyph_x += 2 if character == "." else 4
 
 
+def _scroll_offset(
+    now: datetime,
+    started_at: datetime,
+    overflow_width: int,
+    synchronized_overflow_width: int | None = None,
+) -> int:
+    synchronized_width = synchronized_overflow_width or overflow_width
+    travel_seconds = synchronized_width / SCROLL_PIXELS_PER_SECOND
+    cycle_seconds = SCROLL_START_PAUSE_SECONDS + travel_seconds + SCROLL_END_PAUSE_SECONDS
+    elapsed = max(0.0, (now - started_at).total_seconds()) % cycle_seconds
+    if elapsed <= SCROLL_START_PAUSE_SECONDS:
+        return 0
+    travel_elapsed = elapsed - SCROLL_START_PAUSE_SECONDS
+    if travel_elapsed >= travel_seconds:
+        return overflow_width
+    return min(overflow_width, int(travel_elapsed * SCROLL_PIXELS_PER_SECOND))
+
+
+def _paste_text_strip(
+    image: Image.Image,
+    strip: Image.Image,
+    position: tuple[int, int],
+    viewport_width: int,
+    now: datetime,
+    started_at: datetime,
+    synchronized_overflow_width: int,
+    scrolling: bool,
+    center_when_static: bool = False,
+) -> None:
+    if viewport_width <= 0:
+        return
+    viewport = Image.new("RGB", (viewport_width, strip.height), (0, 0, 0))
+    if strip.width <= viewport_width or not scrolling:
+        x = (viewport_width - strip.width) // 2 if center_when_static else 0
+        viewport.paste(strip.crop((0, 0, viewport_width, strip.height)), (max(0, x), 0))
+    else:
+        overflow_width = strip.width - viewport_width
+        offset = _scroll_offset(
+            now,
+            started_at,
+            overflow_width,
+            synchronized_overflow_width,
+        )
+        viewport = strip.crop((offset, 0, offset + viewport_width, strip.height))
+    image.paste(viewport, position)
+
+
+def _text_strip(text: str, fill: tuple[int, int, int]) -> Image.Image:
+    strip = Image.new("RGB", (max(1, _text_width(text)), 7), (0, 0, 0))
+    _draw_text(ImageDraw.Draw(strip), (0, 0), text, fill)
+    return strip
+
+
 def _countdown(arrival: Arrival, now: datetime) -> str:
     seconds = max(0, int((arrival.arrival_time - now).total_seconds()))
     if seconds < 60:
@@ -187,7 +244,7 @@ def _header_parts(station: Station, direction: str, width: int) -> tuple[str, st
     station_text = _station_identity(station)
     direction_text = station.north_label if direction == "N" else station.south_label
     direction_text = (direction_text or direction).upper()
-    gap = 2
+    gap = HEADER_GAP
 
     if _text_width(station_text) + gap + _text_width(direction_text) <= width:
         return station_text, direction_text
@@ -204,6 +261,11 @@ def _header_parts(station: Station, direction: str, width: int) -> tuple[str, st
     return _fit_text(_abbreviate_header(_station_identity(station)), width), ""
 
 
+def _full_header_parts(station: Station, direction: str) -> tuple[str, str]:
+    direction_text = station.north_label if direction == "N" else station.south_label
+    return _station_identity(station), (direction_text or direction).upper()
+
+
 def render_board(
     state: BoardState,
     config: AppConfig,
@@ -215,34 +277,62 @@ def render_board(
     arrivals = list(state.arrivals[: config.board.max_arrivals])
     age = state.age_seconds(current)
     stale = age is None or age >= config.network.stale_after_seconds
+    visible_rows = min(2, len(arrivals))
+    if stale:
+        visible_rows = min(1, visible_rows)
 
-    header_gap = 2
+    header_gap = HEADER_GAP
     try:
-        station_name, station_context = _header_parts(
-            resolve_station(state.station_id),
-            state.direction,
-            config.display.width - 2,
-        )
+        station = resolve_station(state.station_id)
+        if config.display.scrolling:
+            station_name, station_context = _full_header_parts(station, state.direction)
+        else:
+            station_name, station_context = _header_parts(
+                station,
+                state.direction,
+                config.display.width - 2,
+            )
     except ValueError:
         station_name = _fit_text(state.station_name, config.display.width - 2)
         station_context = state.direction
     header_width = _text_width(station_name)
     if station_context:
         header_width += header_gap + _text_width(station_context)
-    station_name_x = max(1, (config.display.width - header_width) // 2)
-    _draw_text(draw, (station_name_x, 2), station_name, STATION_COLOR)
+    header_strip = Image.new("RGB", (max(1, header_width), 7), (0, 0, 0))
+    header_draw = ImageDraw.Draw(header_strip)
+    _draw_text(header_draw, (0, 0), station_name, STATION_COLOR)
     if station_context:
-        line_position = (station_name_x + _text_width(station_name) + header_gap, 2)
-        _draw_text(draw, line_position, station_context, LINE_COLOR)
+        _draw_text(
+            header_draw,
+            (_text_width(station_name) + header_gap, 0),
+            station_context,
+            LINE_COLOR,
+        )
+    header_viewport_width = config.display.width - 2
+    synchronized_overflow_width = max(0, header_strip.width - header_viewport_width)
+    for arrival in arrivals[:visible_rows]:
+        countdown_x = config.display.width - 1 - _text_width(_countdown(arrival, current))
+        destination_width = max(0, countdown_x - 15)
+        synchronized_overflow_width = max(
+            synchronized_overflow_width,
+            _text_width(arrival.destination) - destination_width,
+        )
+    _paste_text_strip(
+        image,
+        header_strip,
+        (1, 2),
+        header_viewport_width,
+        current,
+        state.updated_at or current,
+        synchronized_overflow_width,
+        config.display.scrolling,
+        center_when_static=True,
+    )
 
     if not arrivals and not stale:
         message = "NO UPCOMING TRAINS"
         _draw_text(draw, (3, 17), _fit_text(message, 122), (252, 204, 10))
         return image
-
-    visible_rows = min(2, len(arrivals))
-    if stale:
-        visible_rows = min(1, visible_rows)
 
     for index, arrival in enumerate(arrivals[:visible_rows]):
         # Leave one completely blank LED row between the 10-pixel bullets.
@@ -274,8 +364,21 @@ def render_board(
         countdown_width = _text_width(countdown)
         countdown_x = config.display.width - 1 - countdown_width
         destination_width = max(0, countdown_x - 15)
-        destination = _fit_text(arrival.destination, destination_width)
-        _draw_text(draw, (13, y + 1), destination, (255, 255, 255))
+        destination = (
+            arrival.destination
+            if config.display.scrolling
+            else _fit_text(arrival.destination, destination_width)
+        )
+        _paste_text_strip(
+            image,
+            _text_strip(destination, (255, 255, 255)),
+            (13, y + 1),
+            destination_width,
+            current,
+            state.updated_at or current,
+            synchronized_overflow_width,
+            config.display.scrolling,
+        )
         _draw_text(draw, (countdown_x, y + 1), countdown, (252, 204, 10))
 
     if stale:

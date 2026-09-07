@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from mta_board.config import AppConfig
@@ -11,12 +12,26 @@ from mta_board.render import (
     ROUTE_COLORS,
     STATION_COLOR,
     _header_parts,
+    _scroll_offset,
     _text_width,
     render_board,
 )
 
 
 class RenderTests(unittest.TestCase):
+    def test_scroll_waits_travels_holds_and_repeats(self) -> None:
+        started = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=4), started, 20), 0)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=5.5), started, 20), 6)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=8), started, 20), 20)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=9), started, 20), 0)
+
+    def test_shorter_rows_reset_on_longest_row_cycle(self) -> None:
+        started = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=6), started, 10, 20), 10)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=8), started, 10, 20), 10)
+        self.assertEqual(_scroll_offset(started + timedelta(seconds=9), started, 10, 20), 0)
+
     def test_header_combines_station_identity_and_direction(self) -> None:
         self.assertEqual(
             _header_parts(resolve_station("R09"), "S", 126),
@@ -29,6 +44,30 @@ class RenderTests(unittest.TestCase):
 
     def test_ellipsis_dots_are_tightly_spaced(self) -> None:
         self.assertEqual(_text_width("..."), 9)
+
+    def test_long_text_scrolls_and_toggle_can_freeze_it(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            station_id="629",
+            station_name="59 St",
+            direction="S",
+            routes=("6",),
+            arrivals=(
+                Arrival("6", "Brooklyn Bridge-City Hall", now + timedelta(minutes=3, seconds=30)),
+            ),
+            updated_at=now,
+        )
+        scrolling = AppConfig()
+        frozen = replace(scrolling, display=replace(scrolling.display, scrolling=False))
+
+        self.assertNotEqual(
+            render_board(state, scrolling, now=now).tobytes(),
+            render_board(state, scrolling, now=now + timedelta(seconds=6)).tobytes(),
+        )
+        self.assertEqual(
+            render_board(state, frozen, now=now).tobytes(),
+            render_board(state, frozen, now=now + timedelta(seconds=6)).tobytes(),
+        )
 
     def test_frame_is_128_by_32_and_contains_nw_yellow(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)

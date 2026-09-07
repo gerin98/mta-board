@@ -36,8 +36,10 @@ PAGE = """<!doctype html>
   <script>
     const board = document.querySelector('#board');
     const status = document.querySelector('#status');
-    async function refresh() {
+    function refreshFrame() {
       board.src = '/frame.png?t=' + Date.now();
+    }
+    async function refreshStatus() {
       try {
         const response = await fetch('/api/status', {cache: 'no-store'});
         const data = await response.json();
@@ -47,7 +49,8 @@ PAGE = """<!doctype html>
         status.className = 'stale'; status.textContent = 'Preview server unavailable';
       }
     }
-    refresh(); setInterval(refresh, 1000);
+    refreshFrame(); setInterval(refreshFrame, 83);
+    refreshStatus(); setInterval(refreshStatus, 1000);
   </script>
 </body>
 </html>"""
@@ -108,7 +111,11 @@ def make_handler(service: BoardService) -> type[BaseHTTPRequestHandler]:
             if no_cache:
                 self.send_header("Cache-Control", "no-store")
             self.end_headers()
-            self.wfile.write(content)
+            try:
+                self.wfile.write(content)
+            except (BrokenPipeError, ConnectionResetError):
+                # The browser may replace an in-flight frame during animation.
+                pass
 
         def log_message(self, fmt: str, *args: object) -> None:
             return
