@@ -89,6 +89,37 @@ def load_config(path: str | Path) -> AppConfig:
     return config
 
 
+def save_config(config: AppConfig, path: str | Path) -> None:
+    """Write a complete, validated configuration using stable TOML formatting."""
+    validate_config(config)
+    config_path = Path(path)
+    routes = ", ".join(f'"{route}"' for route in config.board.routes)
+    content = f'''[board]
+station_id = "{config.board.station_id}"
+routes = [{routes}]
+direction = "{config.board.direction}"
+minimum_lead_minutes = {config.board.minimum_lead_minutes}
+max_arrivals = {config.board.max_arrivals}
+
+[network]
+feed_refresh_seconds = {config.network.feed_refresh_seconds}
+stale_after_seconds = {config.network.stale_after_seconds}
+request_timeout_seconds = {config.network.request_timeout_seconds}
+
+[display]
+width = {config.display.width}
+height = {config.display.height}
+brightness = {config.display.brightness}
+gpio_slowdown = {config.display.gpio_slowdown}
+'''
+    temporary_path = config_path.with_name(f".{config_path.name}.tmp")
+    try:
+        temporary_path.write_text(content, encoding="utf-8")
+        temporary_path.replace(config_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
 def apply_overrides(config: AppConfig, args: argparse.Namespace) -> AppConfig:
     board = config.board
     if getattr(args, "station", None):

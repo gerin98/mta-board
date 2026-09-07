@@ -4,11 +4,29 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 from mta_board.config import AppConfig
+from mta_board.catalog import resolve_station
 from mta_board.models import Arrival, BoardState
-from mta_board.render import ROUTE_COLORS, STATION_COLOR, _text_width, render_board
+from mta_board.render import (
+    LINE_COLOR,
+    ROUTE_COLORS,
+    STATION_COLOR,
+    _header_parts,
+    _text_width,
+    render_board,
+)
 
 
 class RenderTests(unittest.TestCase):
+    def test_header_combines_station_identity_and_direction(self) -> None:
+        self.assertEqual(
+            _header_parts(resolve_station("R09"), "S", 126),
+            ("QNSBORO PLZ", "MANHATTAN"),
+        )
+        self.assertEqual(
+            _header_parts(resolve_station("629"), "S", 126),
+            ("59 ST LEX AV", "DTWN"),
+        )
+
     def test_ellipsis_dots_are_tightly_spaced(self) -> None:
         self.assertEqual(_text_width("..."), 9)
 
@@ -37,6 +55,8 @@ class RenderTests(unittest.TestCase):
         self.assertIn(ROUTE_COLORS["N"], colors)
         # The station header occupies the top band; arrivals begin below it.
         self.assertTrue(any(frame.getpixel((x, 2)) == STATION_COLOR for x in range(1, 127)))
+        self.assertTrue(any(frame.getpixel((x, 2)) == LINE_COLOR for x in range(1, 127)))
+        self.assertTrue(any(frame.getpixel((x, 8)) == LINE_COLOR for x in range(1, 127)))
         self.assertEqual(frame.getpixel((5, 10)), ROUTE_COLORS["N"])
 
     def test_stale_frame_contains_red_status_area(self) -> None:

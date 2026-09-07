@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from PIL import Image, ImageDraw
 
+from .catalog import Station, resolve_station
 from .config import AppConfig
 from .models import Arrival, BoardState
 
@@ -24,6 +25,16 @@ ROUTE_COLORS: dict[str, tuple[int, int, int]] = {
 # Brighter than the MTA's dark signage blue so it remains legible on a matrix
 # running at low indoor brightness.
 STATION_COLOR = (0, 170, 255)
+LINE_COLOR = (170, 220, 255)
+
+HEADER_ABBREVIATIONS = {
+    "BROADWAY": "BDWY",
+    "DOWNTOWN": "DTWN",
+    "LEXINGTON": "LEX",
+    "PLAZA": "PLZ",
+    "QUEENSBORO": "QNSBORO",
+    "UPTOWN": "UPTWN",
+}
 
 # Fixed 5x7 bitmap glyphs keep every character aligned to the LED grid. Using
 # Pillow's default font here would allow different Pillow versions to select
@@ -72,6 +83,9 @@ GLYPHS: dict[str, tuple[str, ...]] = {
 }
 
 MINI_GLYPHS: dict[str, tuple[str, ...]] = {
+    " ": ("000",) * 5, "-": ("000", "000", "111", "000", "000"),
+    ".": ("000", "000", "000", "000", "010"),
+    "/": ("001", "001", "010", "100", "100"),
     "0": ("111", "101", "101", "101", "111"), "1": ("010", "110", "010", "010", "111"),
     "2": ("110", "001", "010", "100", "111"), "3": ("110", "001", "010", "001", "110"),
     "4": ("101", "101", "111", "001", "001"), "5": ("111", "100", "110", "001", "110"),
@@ -136,15 +150,14 @@ def _draw_mini_text(
     fill: tuple[int, int, int],
 ) -> None:
     start_x, start_y = position
-    for character_index, character in enumerate(text.upper()):
-        glyph = MINI_GLYPHS.get(character)
-        if glyph is None:
-            continue
-        glyph_x = start_x + character_index * 4
+    glyph_x = start_x
+    for character in text.upper():
+        glyph = MINI_GLYPHS.get(character, MINI_GLYPHS[" "])
         for row_index, row in enumerate(glyph):
             for column_index, pixel in enumerate(row):
                 if pixel == "1":
                     draw.point((glyph_x + column_index, start_y + row_index), fill=fill)
+        glyph_x += 2 if character == "." else 4
 
 
 def _countdown(arrival: Arrival, now: datetime) -> str:
@@ -156,6 +169,39 @@ def _countdown(arrival: Arrival, now: datetime) -> str:
 
 def _route_text_color(route: str) -> tuple[int, int, int]:
     return (0, 0, 0) if route in {"N", "Q", "R", "W"} else (255, 255, 255)
+
+
+def _abbreviate_header(text: str) -> str:
+    return " ".join(HEADER_ABBREVIATIONS.get(word, word) for word in text.upper().split())
+
+
+def _station_identity(station: Station) -> str:
+    name = station.name.upper()
+    line = station.line.upper()
+    if _text_width(name) <= 53 and line not in name:
+        return f"{name} {line}"
+    return name
+
+
+def _header_parts(station: Station, direction: str, width: int) -> tuple[str, str]:
+    station_text = _station_identity(station)
+    direction_text = station.north_label if direction == "N" else station.south_label
+    direction_text = (direction_text or direction).upper()
+    gap = 2
+
+    if _text_width(station_text) + gap + _text_width(direction_text) <= width:
+        return station_text, direction_text
+
+    station_text = _abbreviate_header(station_text)
+    direction_text = _abbreviate_header(direction_text)
+    if _text_width(station_text) + gap + _text_width(direction_text) <= width:
+        return station_text, direction_text
+
+    station_width = max(0, width - gap - _text_width(direction_text))
+    station_text = _fit_text(station_text, station_width)
+    if station_text:
+        return station_text, direction_text
+    return _fit_text(_abbreviate_header(_station_identity(station)), width), ""
 
 
 def render_board(
@@ -170,9 +216,24 @@ def render_board(
     age = state.age_seconds(current)
     stale = age is None or age >= config.network.stale_after_seconds
 
-    station_name = _fit_text(state.station_name, config.display.width - 2)
-    station_name_x = max(1, (config.display.width - _text_width(station_name)) // 2)
+    header_gap = 2
+    try:
+        station_name, station_context = _header_parts(
+            resolve_station(state.station_id),
+            state.direction,
+            config.display.width - 2,
+        )
+    except ValueError:
+        station_name = _fit_text(state.station_name, config.display.width - 2)
+        station_context = state.direction
+    header_width = _text_width(station_name)
+    if station_context:
+        header_width += header_gap + _text_width(station_context)
+    station_name_x = max(1, (config.display.width - header_width) // 2)
     _draw_text(draw, (station_name_x, 2), station_name, STATION_COLOR)
+    if station_context:
+        line_position = (station_name_x + _text_width(station_name) + header_gap, 2)
+        _draw_text(draw, line_position, station_context, LINE_COLOR)
 
     if not arrivals and not stale:
         message = "NO UPCOMING TRAINS"

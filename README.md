@@ -1,8 +1,8 @@
 # MTA LED Arrival Board
 
-A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
+![59 St Lexington Avenue 6 arrival board preview](docs/59-st-lexington-preview.png)
 
-![Queensboro Plaza N/W arrival board preview](docs/queensboro-plaza-preview.png)
+A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
 
 The layout shows the station name and next two trains using a crisp 5×7 LED font, official route colors, destinations, and countdowns. Live MTA subway data does not require an API key.
 
@@ -39,7 +39,14 @@ mta-board snapshot --demo --output preview.png
 
 ## Configure it
 
-Edit `config.toml`. The station must be the base GTFS stop ID without its direction suffix:
+Show the saved setup or update it using a station ID or unique search:
+
+```sh
+mta-board configure
+mta-board configure --station "broadway astoria" --routes N,W --direction S
+```
+
+This writes `config.toml`. You can also edit it directly; station IDs must omit the direction suffix:
 
 ```toml
 [board]
@@ -64,6 +71,9 @@ The bundled catalog includes all 496 MTA subway and Staten Island Railway statio
 mta-board stations broadway
 mta-board stations "broadway astoria"
 mta-board stations queens N
+mta-board stations 6
+mta-board lines N
+mta-board lines Lexington
 ```
 
 Results show the GTFS ID, routes, and rider-facing meaning of each direction. A unique search can also be used directly:
@@ -126,6 +136,15 @@ Inspect logs with:
 
 ```sh
 sudo journalctl -u mta-board -f
+```
+
+To change a deployed board, SSH into the Pi, update its saved configuration, and restart the service:
+
+```sh
+sudo /opt/mta-board/.venv/bin/mta-board configure \
+  --config /opt/mta-board/config.toml \
+  --station "broadway astoria" --routes N,W --direction S
+sudo systemctl restart mta-board
 ```
 
 The matrix driver requires elevated GPIO access; its upstream runtime initializes the hardware and then drops privileges where supported.

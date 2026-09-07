@@ -42,6 +42,13 @@ class Station:
         return result
 
 
+@dataclass(frozen=True, slots=True)
+class LineInfo:
+    route: str
+    station_count: int
+    corridors: tuple[str, ...]
+
+
 def load_catalog() -> tuple[Station, ...]:
     resource = files("mta_board").joinpath("data/stations.json")
     data = json.loads(resource.read_text(encoding="utf-8"))
@@ -72,6 +79,13 @@ def search_stations(query: str, stations: tuple[Station, ...] | None = None) -> 
         return list(catalog)
     terms = normalized.split()
 
+    exact_names = [station for station in catalog if _normalize(station.name) == normalized]
+    if exact_names:
+        return sorted(exact_names, key=lambda station: (station.name, station.id))
+
+    route_terms = {term.upper() for term in terms} & ROUTE_TOKENS
+    text_terms = [term for term in terms if term.upper() not in route_terms]
+
     def searchable(station: Station) -> str:
         return _normalize(
             " ".join(
@@ -88,7 +102,12 @@ def search_stations(query: str, stations: tuple[Station, ...] | None = None) -> 
             )
         )
 
-    matches = [station for station in catalog if all(term in searchable(station) for term in terms)]
+    matches = [
+        station
+        for station in catalog
+        if route_terms <= set(station.routes)
+        and all(term in searchable(station) for term in text_terms)
+    ]
     return sorted(
         matches,
         key=lambda station: (
@@ -98,6 +117,31 @@ def search_stations(query: str, stations: tuple[Station, ...] | None = None) -> 
             station.name,
             station.id,
         ),
+    )
+
+
+def search_lines(query: str = "", stations: tuple[Station, ...] | None = None) -> list[LineInfo]:
+    catalog = stations or load_catalog()
+    by_route: dict[str, list[Station]] = {}
+    for station in catalog:
+        for route in station.routes:
+            by_route.setdefault(route, []).append(station)
+
+    normalized = _normalize(query)
+    exact_route = normalized.upper() if normalized.upper() in by_route else None
+    results: list[LineInfo] = []
+    for route, route_stations in by_route.items():
+        corridors = tuple(sorted({station.line for station in route_stations}))
+        searchable = _normalize(" ".join((route, *corridors)))
+        if exact_route and route != exact_route:
+            continue
+        if not exact_route and normalized and normalized not in searchable:
+            continue
+        results.append(LineInfo(route, len(route_stations), corridors))
+
+    return sorted(
+        results,
+        key=lambda line: (not line.route.isdigit(), int(line.route) if line.route.isdigit() else line.route),
     )
 
 

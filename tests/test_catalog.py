@@ -5,7 +5,7 @@ from argparse import Namespace
 from contextlib import redirect_stdout
 from io import StringIO
 
-from mta_board.catalog import load_catalog, resolve_station, search_stations
+from mta_board.catalog import load_catalog, resolve_station, search_lines, search_stations
 from mta_board.__main__ import list_stations
 
 
@@ -30,6 +30,14 @@ class CatalogTests(unittest.TestCase):
 
     def test_street_number_is_not_forced_to_route(self) -> None:
         self.assertEqual(resolve_station("1 Av").id, "L06")
+
+    def test_route_only_search_finds_stations_served_by_route(self) -> None:
+        matches = search_stations("6")
+        self.assertTrue(matches)
+        self.assertTrue(all("6" in station.routes for station in matches))
+
+    def test_line_search_accepts_corridor_name(self) -> None:
+        self.assertEqual([line.route for line in search_lines("Lexington")], ["4", "5", "6", "S"])
 
     def test_ambiguous_name_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "ambiguous"):
