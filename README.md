@@ -2,12 +2,15 @@
 
 A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
 
+![Queensboro Plaza N/W arrival board preview](docs/queensboro-plaza-preview.png)
+
+The layout shows the station name and next two trains using a crisp 5×7 LED font, official route colors, destinations, and countdowns. Live MTA subway data does not require an API key.
+
 The included configuration tracks Manhattan-bound N/W trains at Broadway in Astoria:
 
 - Station: `R05` (Broadway)
 - Direction: `S` (southbound/Manhattan-bound)
 - Realtime feed: MTA `gtfs-nqrw`
-- API key: not required
 
 ## Run the virtual board
 
@@ -44,7 +47,7 @@ station_id = "R05"
 routes = ["N", "W"]
 direction = "S"
 minimum_lead_minutes = 0
-max_arrivals = 3
+max_arrivals = 2
 ```
 
 Settings can be temporarily overridden without editing the file:
@@ -52,6 +55,30 @@ Settings can be temporarily overridden without editing the file:
 ```sh
 mta-board preview --station R05 --routes N,W --direction S --minimum-lead 5
 ```
+
+### Find a station
+
+The bundled catalog includes all 496 MTA subway and Staten Island Railway station records. Search by station name, borough, line, route, direction label, or ID:
+
+```sh
+mta-board stations broadway
+mta-board stations "broadway astoria"
+mta-board stations queens N
+```
+
+Results show the GTFS ID, routes, and rider-facing meaning of each direction. A unique search can also be used directly:
+
+```sh
+mta-board preview --station "broadway astoria" --routes N,W --direction S
+```
+
+Ambiguous searches stop and print matching IDs rather than silently selecting the wrong station. The bundled catalog can be refreshed from the official NY Open Data dataset with:
+
+```sh
+python scripts/update_station_catalog.py
+```
+
+`N` and `S` are internal GTFS direction codes, not necessarily geographic north and south. Search results show rider-facing labels such as Uptown, Downtown, Queens, Manhattan, or Westbound.
 
 MTA subway stop IDs and route metadata come from the [official static GTFS feed](https://www.mta.info/developers). The application automatically selects the appropriate realtime feed for the configured routes.
 
@@ -110,4 +137,3 @@ python -m unittest discover -s tests -v
 ```
 
 The tests use generated GTFS-Realtime fixtures and do not require network access.
-

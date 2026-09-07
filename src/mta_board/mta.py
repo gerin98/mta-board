@@ -12,6 +12,7 @@ from pathlib import Path
 
 from google.transit import gtfs_realtime_pb2
 
+from .catalog import bundled_stop_names
 from .config import AppConfig
 from .models import Arrival
 
@@ -74,7 +75,7 @@ class StopCatalog:
         except Exception:
             if self.cache_file.exists():
                 return json.loads(self.cache_file.read_text(encoding="utf-8"))
-            raise
+            return bundled_stop_names()
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
             with archive.open("stops.txt") as raw:
                 rows = csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8-sig"))

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
+from .catalog import resolve_station, search_stations
 from .config import AppConfig, apply_overrides, load_config
 from .matrix import run_matrix
 from .service import BoardService
@@ -23,6 +25,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mta-board")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    stations = subparsers.add_parser("stations", help="search all MTA subway stations")
+    stations.add_argument("query", nargs="*", help="name, ID, borough, line, or route")
+    stations.add_argument("--limit", type=int, default=25)
+    stations.add_argument("--json", action="store_true", help="output machine-readable JSON")
+
     preview = subparsers.add_parser("preview", help="run the browser-based virtual board")
     _add_common(preview)
     preview.add_argument("--host", default="127.0.0.1")
@@ -40,13 +47,43 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def resolve_config(args: argparse.Namespace) -> AppConfig:
+    if getattr(args, "station", None):
+        args.station = resolve_station(args.station).id
     return apply_overrides(load_config(args.config), args)
+
+
+def list_stations(args: argparse.Namespace) -> None:
+    query = " ".join(args.query)
+    matches = search_stations(query)
+    if args.limit < 1:
+        raise ValueError("limit must be positive")
+    visible = matches[: args.limit]
+    if args.json:
+        print(json.dumps([station.as_dict() for station in visible], indent=2))
+        return
+    if not visible:
+        print(f"No stations match {query!r}")
+        return
+    for index, station in enumerate(visible):
+        if index:
+            print()
+        routes = ", ".join(station.routes) or "None listed"
+        print(f"{station.id} — {station.name}")
+        print(f"  Location:   {station.borough_name} · {station.line}")
+        print(f"  Trains:     {routes}")
+        print(f"  Direction N: {station.north_label or 'Last stop'}")
+        print(f"  Direction S: {station.south_label or 'Last stop'}")
+    if len(matches) > len(visible):
+        print(f"Showing {len(visible)} of {len(matches)} matches; use --limit to show more.")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "stations":
+            list_stations(args)
+            return 0
         config = resolve_config(args)
         service = BoardService(config, demo=args.demo)
         if args.command == "preview":
@@ -66,4 +103,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

@@ -21,6 +21,10 @@ ROUTE_COLORS: dict[str, tuple[int, int, int]] = {
     "SI": (0, 57, 166),
 }
 
+# Brighter than the MTA's dark signage blue so it remains legible on a matrix
+# running at low indoor brightness.
+STATION_COLOR = (0, 170, 255)
+
 # Fixed 5x7 bitmap glyphs keep every character aligned to the LED grid. Using
 # Pillow's default font here would allow different Pillow versions to select
 # antialiased fonts, which look soft when enlarged in the browser preview.
@@ -90,7 +94,11 @@ MINI_GLYPHS: dict[str, tuple[str, ...]] = {
 
 
 def _text_width(text: str) -> int:
-    return max(0, len(text) * 6 - 1)
+    if not text:
+        return 0
+    advances = sum(3 if character == "." else 6 for character in text[:-1])
+    final_width = 3 if text[-1] == "." else 5
+    return advances + final_width
 
 
 def _fit_text(text: str, width: int) -> str:
@@ -111,13 +119,14 @@ def _draw_text(
     fill: tuple[int, int, int],
 ) -> None:
     start_x, start_y = position
-    for character_index, character in enumerate(text.upper()):
+    glyph_x = start_x
+    for character in text.upper():
         glyph = GLYPHS.get(character, GLYPHS[" "])
-        glyph_x = start_x + character_index * 6
         for row_index, row in enumerate(glyph):
             for column_index, pixel in enumerate(row):
                 if pixel == "1":
                     draw.point((glyph_x + column_index, start_y + row_index), fill=fill)
+        glyph_x += 3 if character == "." else 6
 
 
 def _draw_mini_text(
@@ -161,25 +170,34 @@ def render_board(
     age = state.age_seconds(current)
     stale = age is None or age >= config.network.stale_after_seconds
 
+    station_name = _fit_text(state.station_name, config.display.width - 2)
+    station_name_x = max(1, (config.display.width - _text_width(station_name)) // 2)
+    _draw_text(draw, (station_name_x, 2), station_name, STATION_COLOR)
+
     if not arrivals and not stale:
         message = "NO UPCOMING TRAINS"
-        _draw_text(draw, (3, 12), _fit_text(message, 122), (252, 204, 10))
+        _draw_text(draw, (3, 17), _fit_text(message, 122), (252, 204, 10))
         return image
 
-    visible_rows = min(3, len(arrivals))
+    visible_rows = min(2, len(arrivals))
     if stale:
-        visible_rows = min(2, visible_rows)
+        visible_rows = min(1, visible_rows)
 
     for index, arrival in enumerate(arrivals[:visible_rows]):
-        y = 1 + index * 10
+        # Leave one completely blank LED row between the 10-pixel bullets.
+        y = 10 + index * 11
         color = ROUTE_COLORS.get(arrival.route, (128, 129, 131))
         draw.ellipse((1, y, 10, y + 9), fill=color)
         route_label = arrival.route[:2]
         if len(route_label) == 1:
             route_width = _text_width(route_label)
+            # The bullet is 10 pixels wide, so its visual center falls between
+            # two columns. Favor the right-hand center column; rounding down
+            # makes every 5-pixel route glyph look one pixel too far left.
+            route_x = 1 + (11 - route_width) // 2
             _draw_text(
                 draw,
-                (1 + (10 - route_width) // 2, y + 1),
+                (route_x, y + 1),
                 route_label,
                 _route_text_color(arrival.route),
             )

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from .catalog import resolve_station
 from .service import BoardService
 
 PAGE = """<!doctype html>
@@ -57,11 +58,16 @@ def _status_payload(service: BoardService) -> dict:
     now = datetime.now(timezone.utc)
     age = state.age_seconds(now)
     stale = age is None or age >= service.config.network.stale_after_seconds
+    try:
+        station = resolve_station(state.station_id)
+        direction_label = station.south_label if state.direction == "S" else station.north_label
+    except ValueError:
+        direction_label = "Southbound" if state.direction == "S" else "Northbound"
     return {
         "station_id": state.station_id,
         "station_name": state.station_name,
         "direction": state.direction,
-        "direction_label": "Southbound" if state.direction == "S" else "Northbound",
+        "direction_label": direction_label or "Last stop",
         "routes": list(state.routes),
         "arrival_count": len(state.arrivals),
         "updated_at": state.updated_at.isoformat() if state.updated_at else None,

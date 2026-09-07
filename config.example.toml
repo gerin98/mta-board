@@ -2,11 +2,12 @@
 # Use the base GTFS station ID. Broadway in Astoria is R05.
 station_id = "R05"
 routes = ["N", "W"]
-# N = northbound, S = southbound in MTA stop IDs.
+# N and S are MTA's internal direction codes. The rider-facing label may be
+# Uptown/Downtown, east/west, a borough, or a terminal destination.
 direction = "S"
 # Hide trains that will arrive before this many minutes have elapsed.
 minimum_lead_minutes = 0
-max_arrivals = 3
+max_arrivals = 2
 
 [network]
 feed_refresh_seconds = 30
@@ -20,4 +21,3 @@ height = 32
 brightness = 25
 # Zero is normally appropriate for an original Pi Zero W. Tune if needed.
 gpio_slowdown = 0
-

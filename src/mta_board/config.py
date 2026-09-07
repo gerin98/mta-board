@@ -18,7 +18,7 @@ class BoardConfig:
     routes: tuple[str, ...] = ("N", "W")
     direction: str = "S"
     minimum_lead_minutes: int = 0
-    max_arrivals: int = 3
+    max_arrivals: int = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +71,7 @@ def load_config(path: str | Path) -> AppConfig:
             routes=tuple(route.upper() for route in routes),
             direction=str(board_data.get("direction", "S")).upper(),
             minimum_lead_minutes=_integer(board_data, "minimum_lead_minutes", 0),
-            max_arrivals=_integer(board_data, "max_arrivals", 3),
+            max_arrivals=_integer(board_data, "max_arrivals", 2),
         ),
         network=NetworkConfig(
             feed_refresh_seconds=_integer(network_data, "feed_refresh_seconds", 30),
@@ -118,8 +118,8 @@ def validate_config(config: AppConfig) -> None:
         raise ValueError(f"unsupported route(s): {', '.join(sorted(unknown_routes))}")
     if board.minimum_lead_minutes < 0:
         raise ValueError("minimum_lead_minutes cannot be negative")
-    if not 1 <= board.max_arrivals <= 3:
-        raise ValueError("max_arrivals must be between 1 and 3 for the 128x32 layout")
+    if not 1 <= board.max_arrivals <= 2:
+        raise ValueError("max_arrivals must be between 1 and 2 for the station-header layout")
     if config.network.feed_refresh_seconds < 10:
         raise ValueError("feed_refresh_seconds must be at least 10")
     if config.network.stale_after_seconds < config.network.feed_refresh_seconds:

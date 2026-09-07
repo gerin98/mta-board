@@ -13,6 +13,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.board.station_id, "R05")
         self.assertEqual(config.board.routes, ("N", "W"))
         self.assertEqual(config.board.direction, "S")
+        self.assertEqual(config.board.max_arrivals, 2)
 
     def test_rejects_direction_suffix_in_base_station_id(self) -> None:
         content = """[board]

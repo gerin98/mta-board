@@ -14,11 +14,10 @@ class WebTests(unittest.TestCase):
         status = _status_payload(service)
         self.assertEqual(status["station_id"], "R05")
         self.assertEqual(status["station_name"], "Broadway")
-        self.assertEqual(status["direction_label"], "Southbound")
-        self.assertEqual(status["arrival_count"], 3)
+        self.assertEqual(status["direction_label"], "Manhattan")
+        self.assertEqual(status["arrival_count"], 2)
         self.assertFalse(status["stale"])
 
 
 if __name__ == "__main__":
     unittest.main()
-
