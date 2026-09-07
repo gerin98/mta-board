@@ -1,0 +1,23 @@
+[board]
+# Use the base GTFS station ID. Broadway in Astoria is R05.
+station_id = "R05"
+routes = ["N", "W"]
+# N = northbound, S = southbound in MTA stop IDs.
+direction = "S"
+# Hide trains that will arrive before this many minutes have elapsed.
+minimum_lead_minutes = 0
+max_arrivals = 3
+
+[network]
+feed_refresh_seconds = 30
+stale_after_seconds = 90
+request_timeout_seconds = 10
+
+[display]
+# Two horizontally chained 64x32 panels produce 128x32 pixels.
+width = 128
+height = 32
+brightness = 25
+# Zero is normally appropriate for an original Pi Zero W. Tune if needed.
+gpio_slowdown = 0
+

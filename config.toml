@@ -1,0 +1,18 @@
+[board]
+station_id = "R05"
+routes = ["N", "W"]
+direction = "S"
+minimum_lead_minutes = 0
+max_arrivals = 3
+
+[network]
+feed_refresh_seconds = 30
+stale_after_seconds = 90
+request_timeout_seconds = 10
+
+[display]
+width = 128
+height = 32
+brightness = 25
+gpio_slowdown = 0
+

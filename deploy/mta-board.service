@@ -1,0 +1,15 @@
+[Unit]
+Description=NYC MTA LED arrival board
+Wants=network-online.target
+After=network-online.target time-sync.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mta-board
+ExecStart=/opt/mta-board/.venv/bin/mta-board run --renderer matrix --config /opt/mta-board/config.toml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
