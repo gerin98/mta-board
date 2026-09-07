@@ -25,6 +25,19 @@ mta-board preview
 
 The preview opens at <http://127.0.0.1:8000>. It downloads the official static MTA subway GTFS data on first use, caches station names in `~/.cache/mta-board`, and polls realtime data every 30 seconds.
 
+## CLI reference
+
+| Command | Purpose | Example |
+| --- | --- | --- |
+| `stations` | Search stations by name, ID, borough, route, or direction | `mta-board stations "59 lex 6"` |
+| `lines` | Search routes and their MTA corridors | `mta-board lines Lexington` |
+| `configure` | Show or persist the default station, routes, and direction | `mta-board configure --station 629 --routes 6 --direction S` |
+| `preview` | Run the live browser preview; flags are temporary overrides | `mta-board preview --station R09 --routes N,W --direction S` |
+| `snapshot` | Save one 128×32 PNG frame | `mta-board snapshot --demo --output preview.png` |
+| `run` | Drive the physical HUB75 matrix | `sudo mta-board run --renderer matrix` |
+
+Run `mta-board COMMAND --help` for all options. Commands use `config.toml` by default; pass `--config PATH` to `configure`, `preview`, `snapshot`, or `run` to use another file.
+
 To test without network access:
 
 ```sh
