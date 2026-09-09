@@ -32,14 +32,18 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(_scroll_offset(started + timedelta(seconds=8), started, 10, 20), 10)
         self.assertEqual(_scroll_offset(started + timedelta(seconds=9), started, 10, 20), 0)
 
-    def test_header_combines_station_identity_and_direction(self) -> None:
+    def test_header_combines_station_name_and_direction(self) -> None:
         self.assertEqual(
             _header_parts(resolve_station("R09"), "S", 126),
             ("QNSBORO PLZ", "MANHATTAN"),
         )
         self.assertEqual(
             _header_parts(resolve_station("629"), "S", 126),
-            ("59 ST LEX AV", "DTWN"),
+            ("59 ST", "DOWNTOWN"),
+        )
+        self.assertEqual(
+            _header_parts(resolve_station("R05"), "S", 126),
+            ("BROADWAY", "MANHATTAN"),
         )
 
     def test_ellipsis_dots_are_tightly_spaced(self) -> None:
@@ -105,14 +109,36 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(frame.getpixel((1, 30)), (70, 0, 0))
         self.assertEqual(frame.getpixel((0, 31)), (0, 0, 0))
 
+    def test_fresh_api_error_is_shown_instead_of_no_trains(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            "R05",
+            "Broadway",
+            "S",
+            ("N", "W"),
+            updated_at=now,
+            error="HTTP 503",
+        )
+
+        frame = render_board(state, AppConfig(), now=now)
+        self.assertEqual(frame.getpixel((1, 21)), (70, 0, 0))
+
+    def test_successful_empty_feed_shows_no_upcoming_trains(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState("R05", "Broadway", "S", ("N", "W"), updated_at=now)
+
+        frame = render_board(state, AppConfig(), now=now)
+        self.assertNotEqual(frame.getpixel((1, 21)), (70, 0, 0))
+        self.assertIn((252, 204, 10), {color for _, color in frame.getcolors() or []})
+
     def test_single_character_route_is_centered_in_bullet(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
         state = BoardState(
             station_id="629",
             station_name="59 St",
             direction="S",
-            routes=("6",),
-            arrivals=(Arrival("6", "Brooklyn Bridge-City Hall", now + timedelta(minutes=3)),),
+            routes=("A",),
+            arrivals=(Arrival("A", "Far Rockaway", now + timedelta(minutes=3)),),
             updated_at=now,
         )
 
@@ -124,8 +150,52 @@ class RenderTests(unittest.TestCase):
             if frame.getpixel((x, y)) == (255, 255, 255)
         ]
 
-        self.assertEqual(min(x for x, _ in white_pixels), 4)
-        self.assertEqual(max(x for x, _ in white_pixels), 8)
+        self.assertEqual(min(x for x, _ in white_pixels), 3)
+        self.assertEqual(max(x for x, _ in white_pixels), 7)
+        self.assertEqual(min(y for _, y in white_pixels), 12)
+        self.assertEqual(max(y for _, y in white_pixels), 16)
+
+    def test_route_bullet_has_a_round_pixel_silhouette(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            "R05",
+            "Broadway",
+            "S",
+            ("W",),
+            (Arrival("W", "Whitehall St", now + timedelta(minutes=3)),),
+            now,
+        )
+
+        frame = render_board(state, AppConfig(), now=now)
+        yellow = ROUTE_COLORS["W"]
+        self.assertEqual([frame.getpixel((x, 10)) for x in range(1, 10)].count(yellow), 5)
+        self.assertEqual(frame.getpixel((1, 14)), yellow)
+        self.assertEqual(frame.getpixel((9, 14)), yellow)
+        self.assertEqual(frame.getpixel((1, 10)), (0, 0, 0))
+        self.assertEqual(frame.getpixel((9, 10)), (0, 0, 0))
+
+    def test_countdown_has_four_pixel_left_gap(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            station_id="R05",
+            station_name="Broadway",
+            direction="S",
+            routes=("N",),
+            arrivals=(
+                Arrival(
+                    "N",
+                    "Coney Island-Stillwell Avenue",
+                    now + timedelta(minutes=3),
+                ),
+            ),
+            updated_at=now,
+        )
+
+        frame = render_board(state, AppConfig(), now=now)
+        countdown_x = 127 - _text_width("3 min")
+        for x in range(countdown_x - 4, countdown_x):
+            for y in range(11, 18):
+                self.assertEqual(frame.getpixel((x, y)), (0, 0, 0))
 
 
 if __name__ == "__main__":

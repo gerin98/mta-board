@@ -39,6 +39,42 @@ SCROLL_PIXELS_PER_SECOND = 12
 SCROLL_START_PAUSE_SECONDS = 5
 SCROLL_END_PAUSE_SECONDS = 2
 HEADER_GAP = 4
+DESTINATION_X = 13
+COUNTDOWN_LEFT_GAP = 4
+ROUTE_BULLET = (
+    "001111100",
+    "011111110",
+    "111111111",
+    "111111111",
+    "111111111",
+    "111111111",
+    "111111111",
+    "011111110",
+    "001111100",
+)
+
+# Nitram Micro Mono 5x5 by Martin W. Kirst, used under the MIT License.
+# https://github.com/nitram509/nitram-micro-font
+ROUTE_GLYPHS: dict[str, tuple[int, ...]] = {
+    "0": (14, 25, 21, 19, 14), "1": (4, 6, 4, 4, 14),
+    "2": (14, 8, 14, 2, 14), "3": (14, 8, 12, 8, 14),
+    "4": (2, 2, 10, 14, 8), "5": (14, 2, 14, 8, 14),
+    "6": (6, 2, 14, 10, 14), "7": (14, 8, 12, 8, 8),
+    "8": (14, 10, 14, 10, 14), "9": (14, 10, 14, 8, 14),
+    "A": (6, 9, 17, 31, 17), "B": (7, 9, 15, 17, 15),
+    "C": (14, 17, 1, 17, 14), "D": (15, 25, 17, 17, 15),
+    "E": (31, 1, 15, 1, 31), "F": (31, 1, 15, 1, 1),
+    "G": (14, 1, 25, 17, 14), "H": (9, 17, 31, 17, 17),
+    "I": (14, 4, 4, 4, 14), "J": (12, 8, 8, 10, 14),
+    "K": (9, 5, 3, 5, 9), "L": (1, 1, 1, 1, 15),
+    "M": (17, 27, 21, 17, 17), "N": (17, 19, 21, 25, 17),
+    "O": (14, 25, 17, 17, 14), "P": (7, 9, 7, 1, 1),
+    "Q": (14, 17, 17, 25, 30), "R": (7, 9, 7, 5, 9),
+    "S": (30, 1, 14, 16, 15), "T": (31, 4, 4, 4, 4),
+    "U": (9, 17, 17, 17, 14), "V": (10, 10, 10, 10, 4),
+    "W": (9, 17, 21, 21, 10), "X": (17, 10, 4, 10, 17),
+    "Y": (17, 10, 4, 4, 4), "Z": (31, 8, 4, 2, 31),
+}
 
 # Fixed 5x7 bitmap glyphs keep every character aligned to the LED grid. Using
 # Pillow's default font here would allow different Pillow versions to select
@@ -228,16 +264,37 @@ def _route_text_color(route: str) -> tuple[int, int, int]:
     return (0, 0, 0) if route in {"N", "Q", "R", "W"} else (255, 255, 255)
 
 
+def _draw_route_bullet(
+    draw: ImageDraw.ImageDraw,
+    position: tuple[int, int],
+    fill: tuple[int, int, int],
+) -> None:
+    start_x, start_y = position
+    for row_index, row in enumerate(ROUTE_BULLET):
+        for column_index, pixel in enumerate(row):
+            if pixel == "1":
+                draw.point((start_x + column_index, start_y + row_index), fill=fill)
+
+
+def _draw_route_glyph(
+    draw: ImageDraw.ImageDraw,
+    position: tuple[int, int],
+    character: str,
+    fill: tuple[int, int, int],
+) -> None:
+    start_x, start_y = position
+    for row_index, row in enumerate(ROUTE_GLYPHS[character]):
+        for column_index in range(5):
+            if row & (1 << column_index):
+                draw.point((start_x + column_index, start_y + row_index), fill=fill)
+
+
 def _abbreviate_header(text: str) -> str:
     return " ".join(HEADER_ABBREVIATIONS.get(word, word) for word in text.upper().split())
 
 
 def _station_identity(station: Station) -> str:
-    name = station.name.upper()
-    line = station.line.upper()
-    if _text_width(name) <= 53 and line not in name:
-        return f"{name} {line}"
-    return name
+    return station.name.upper()
 
 
 def _header_parts(station: Station, direction: str, width: int) -> tuple[str, str]:
@@ -277,8 +334,10 @@ def render_board(
     arrivals = list(state.arrivals[: config.board.max_arrivals])
     age = state.age_seconds(current)
     stale = age is None or age >= config.network.stale_after_seconds
+    feed_error = state.error is not None
+    degraded = feed_error or stale
     visible_rows = min(2, len(arrivals))
-    if stale:
+    if degraded:
         visible_rows = min(1, visible_rows)
 
     header_gap = HEADER_GAP
@@ -312,7 +371,7 @@ def render_board(
     synchronized_overflow_width = max(0, header_strip.width - header_viewport_width)
     for arrival in arrivals[:visible_rows]:
         countdown_x = config.display.width - 1 - _text_width(_countdown(arrival, current))
-        destination_width = max(0, countdown_x - 15)
+        destination_width = max(0, countdown_x - DESTINATION_X - COUNTDOWN_LEFT_GAP)
         synchronized_overflow_width = max(
             synchronized_overflow_width,
             _text_width(arrival.destination) - destination_width,
@@ -329,26 +388,21 @@ def render_board(
         center_when_static=True,
     )
 
-    if not arrivals and not stale:
+    if not arrivals and not degraded:
         message = "NO UPCOMING TRAINS"
         _draw_text(draw, (3, 17), _fit_text(message, 122), (252, 204, 10))
         return image
 
     for index, arrival in enumerate(arrivals[:visible_rows]):
-        # Leave one completely blank LED row between the 10-pixel bullets.
+        # A hand-tuned 9x9 silhouette stays circular on the coarse LED grid.
         y = 10 + index * 11
         color = ROUTE_COLORS.get(arrival.route, (128, 129, 131))
-        draw.ellipse((1, y, 10, y + 9), fill=color)
+        _draw_route_bullet(draw, (1, y), color)
         route_label = arrival.route[:2]
-        if len(route_label) == 1:
-            route_width = _text_width(route_label)
-            # The bullet is 10 pixels wide, so its visual center falls between
-            # two columns. Favor the right-hand center column; rounding down
-            # makes every 5-pixel route glyph look one pixel too far left.
-            route_x = 1 + (11 - route_width) // 2
-            _draw_text(
+        if len(route_label) == 1 and route_label in ROUTE_GLYPHS:
+            _draw_route_glyph(
                 draw,
-                (route_x, y + 1),
+                (3, y + 2),
                 route_label,
                 _route_text_color(arrival.route),
             )
@@ -356,14 +410,14 @@ def render_board(
             route_width = len(route_label) * 4 - 1
             _draw_mini_text(
                 draw,
-                (1 + (10 - route_width) // 2, y + 2),
+                (1 + (9 - route_width) // 2, y + 2),
                 route_label,
                 _route_text_color(arrival.route),
             )
         countdown = _countdown(arrival, current)
         countdown_width = _text_width(countdown)
         countdown_x = config.display.width - 1 - countdown_width
-        destination_width = max(0, countdown_x - 15)
+        destination_width = max(0, countdown_x - DESTINATION_X - COUNTDOWN_LEFT_GAP)
         destination = (
             arrival.destination
             if config.display.scrolling
@@ -372,7 +426,7 @@ def render_board(
         _paste_text_strip(
             image,
             _text_strip(destination, (255, 255, 255)),
-            (13, y + 1),
+            (DESTINATION_X, y + 1),
             destination_width,
             current,
             state.updated_at or current,
@@ -381,9 +435,14 @@ def render_board(
         )
         _draw_text(draw, (countdown_x, y + 1), countdown, (252, 204, 10))
 
-    if stale:
+    if degraded:
         status_y = 21
-        status = "OFFLINE" if state.updated_at is None else "DATA STALE"
+        if state.updated_at is None:
+            status = "MTA OFFLINE"
+        elif stale:
+            status = "DATA STALE"
+        else:
+            status = "MTA ERROR"
         draw.rectangle((1, status_y, 126, 30), fill=(70, 0, 0))
         _draw_text(draw, (3, status_y + 2), status, (255, 80, 80))
     return image

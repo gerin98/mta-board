@@ -43,8 +43,9 @@ PAGE = """<!doctype html>
       try {
         const response = await fetch('/api/status', {cache: 'no-store'});
         const data = await response.json();
-        status.className = data.stale ? 'stale' : 'live';
-        status.textContent = `${data.station_name} · ${data.direction_label} · ${data.arrival_count} arrivals · ${data.stale ? 'stale/offline' : 'live'}`;
+        status.className = data.live ? 'live' : 'stale';
+        const health = data.error ? 'MTA feed unavailable' : (data.stale ? 'data stale' : 'live');
+        status.textContent = `${data.station_name} · ${data.direction_label} · ${data.arrival_count} arrivals · ${health}`;
       } catch (_) {
         status.className = 'stale'; status.textContent = 'Preview server unavailable';
       }
@@ -61,6 +62,7 @@ def _status_payload(service: BoardService) -> dict:
     now = datetime.now(timezone.utc)
     age = state.age_seconds(now)
     stale = age is None or age >= service.config.network.stale_after_seconds
+    live = not stale and state.error is None
     try:
         station = resolve_station(state.station_id)
         direction_label = station.south_label if state.direction == "S" else station.north_label
@@ -76,6 +78,7 @@ def _status_payload(service: BoardService) -> dict:
         "updated_at": state.updated_at.isoformat() if state.updated_at else None,
         "age_seconds": round(age, 1) if age is not None else None,
         "stale": stale,
+        "live": live,
         "error": state.error,
         "arrivals": [
             {
