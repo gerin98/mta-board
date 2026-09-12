@@ -1,5 +1,7 @@
 # MTA LED Arrival Board
 
+[![CI](https://github.com/gerin98/mta-board/actions/workflows/ci.yml/badge.svg)](https://github.com/gerin98/mta-board/actions/workflows/ci.yml)
+
 ![Times Square 1 and 2 arrival board preview](docs/times-square-preview.png)
 
 A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
