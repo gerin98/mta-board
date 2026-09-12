@@ -1,0 +1,7 @@
+5x5 Pixel
+Copyright Daniel J. Smith
+
+The bitmap glyph data in src/mta_board/render.py is derived from version 1.0
+of the 5x5 Pixel font. The author distributes the font as "100% Free."
+
+Source: https://www.dafont.com/5x5-pixel.font

@@ -4,7 +4,7 @@
 
 A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
 
-The layout shows the station name and next two trains using a crisp 5×7 LED font, official route colors, destinations, and countdowns. Live MTA subway data does not require an API key.
+The layout shows the station name and next two trains using Daniel J. Smith's crisp 5x5 Pixel font, official route colors, destinations, and countdowns. Live MTA subway data does not require an API key.
 
 The included configuration tracks Manhattan-bound N/W trains at Broadway in Astoria:
 

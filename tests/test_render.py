@@ -47,7 +47,7 @@ class RenderTests(unittest.TestCase):
         )
 
     def test_ellipsis_dots_are_tightly_spaced(self) -> None:
-        self.assertEqual(_text_width("..."), 9)
+        self.assertEqual(_text_width("..."), 5)
 
     def test_long_text_scrolls_and_toggle_can_freeze_it(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
@@ -97,9 +97,9 @@ class RenderTests(unittest.TestCase):
         colors = {color for _, color in frame.getcolors(maxcolors=128 * 32) or []}
         self.assertIn(ROUTE_COLORS["N"], colors)
         # The station header occupies the top band; arrivals begin below it.
-        self.assertTrue(any(frame.getpixel((x, 2)) == STATION_COLOR for x in range(1, 127)))
-        self.assertTrue(any(frame.getpixel((x, 2)) == LINE_COLOR for x in range(1, 127)))
-        self.assertTrue(any(frame.getpixel((x, 8)) == LINE_COLOR for x in range(1, 127)))
+        self.assertTrue(any(frame.getpixel((x, 3)) == STATION_COLOR for x in range(1, 127)))
+        self.assertTrue(any(frame.getpixel((x, 3)) == LINE_COLOR for x in range(1, 127)))
+        self.assertTrue(any(frame.getpixel((x, 7)) == LINE_COLOR for x in range(1, 127)))
         self.assertEqual(frame.getpixel((5, 10)), ROUTE_COLORS["N"])
 
     def test_stale_frame_contains_red_status_area(self) -> None:
@@ -154,6 +154,25 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(max(x for x, _ in white_pixels), 7)
         self.assertEqual(min(y for _, y in white_pixels), 12)
         self.assertEqual(max(y for _, y in white_pixels), 16)
+
+    def test_two_character_route_uses_full_size_font_in_wide_badge(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            station_id="D21",
+            station_name="Broadway-Lafayette St",
+            direction="S",
+            routes=("FX",),
+            arrivals=(Arrival("FX", "Coney Island", now + timedelta(minutes=3)),),
+            updated_at=now,
+        )
+
+        frame = render_board(state, AppConfig(), now=now)
+
+        # The native-width F and X span the full 11-pixel pill.
+        self.assertEqual(frame.getpixel((1, 12)), (255, 255, 255))
+        self.assertEqual(frame.getpixel((11, 12)), (255, 255, 255))
+        self.assertEqual(frame.getpixel((1, 10)), (0, 0, 0))
+        self.assertEqual(frame.getpixel((3, 10)), ROUTE_COLORS["FX"])
 
     def test_route_bullet_has_a_round_pixel_silhouette(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)

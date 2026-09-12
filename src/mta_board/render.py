@@ -52,107 +52,71 @@ ROUTE_BULLET = (
     "011111110",
     "001111100",
 )
+ROUTE_PILL = (
+    "00111111100",
+    "01111111110",
+    "11111111111",
+    "11111111111",
+    "11111111111",
+    "11111111111",
+    "11111111111",
+    "01111111110",
+    "00111111100",
+)
 
-# Nitram Micro Mono 5x5 by Martin W. Kirst, used under the MIT License.
-# https://github.com/nitram509/nitram-micro-font
-ROUTE_GLYPHS: dict[str, tuple[int, ...]] = {
-    "0": (14, 25, 21, 19, 14), "1": (4, 6, 4, 4, 14),
-    "2": (14, 8, 14, 2, 14), "3": (14, 8, 12, 8, 14),
-    "4": (2, 2, 10, 14, 8), "5": (14, 2, 14, 8, 14),
-    "6": (6, 2, 14, 10, 14), "7": (14, 8, 12, 8, 8),
-    "8": (14, 10, 14, 10, 14), "9": (14, 10, 14, 8, 14),
-    "A": (6, 9, 17, 31, 17), "B": (7, 9, 15, 17, 15),
-    "C": (14, 17, 1, 17, 14), "D": (15, 25, 17, 17, 15),
-    "E": (31, 1, 15, 1, 31), "F": (31, 1, 15, 1, 1),
-    "G": (14, 1, 25, 17, 14), "H": (9, 17, 31, 17, 17),
-    "I": (14, 4, 4, 4, 14), "J": (12, 8, 8, 10, 14),
-    "K": (9, 5, 3, 5, 9), "L": (1, 1, 1, 1, 15),
-    "M": (17, 27, 21, 17, 17), "N": (17, 19, 21, 25, 17),
-    "O": (14, 25, 17, 17, 14), "P": (7, 9, 7, 1, 1),
-    "Q": (14, 17, 17, 25, 30), "R": (7, 9, 7, 5, 9),
-    "S": (30, 1, 14, 16, 15), "T": (31, 4, 4, 4, 4),
-    "U": (9, 17, 17, 17, 14), "V": (10, 10, 10, 10, 4),
-    "W": (9, 17, 21, 21, 10), "X": (17, 10, 4, 10, 17),
-    "Y": (17, 10, 4, 4, 4), "Z": (31, 8, 4, 2, 31),
-}
-
-# Fixed 5x7 bitmap glyphs keep every character aligned to the LED grid. Using
-# Pillow's default font here would allow different Pillow versions to select
-# antialiased fonts, which look soft when enlarged in the browser preview.
+# Bitmap glyphs derived from Daniel J. Smith's 5x5 Pixel font, distributed as
+# 100% Free. The source font only contains letters, digits, and spaces, so the
+# punctuation below is drawn to match. Storing the native-resolution bitmaps
+# keeps rendering crisp and identical across Pillow and FreeType versions.
+# https://www.dafont.com/5x5-pixel.font
 GLYPHS: dict[str, tuple[str, ...]] = {
-    " ": ("00000",) * 7,
-    "-": ("00000", "00000", "00000", "11111", "00000", "00000", "00000"),
-    ".": ("00000", "00000", "00000", "00000", "00000", "01100", "01100"),
-    "/": ("00001", "00010", "00100", "00100", "01000", "10000", "00000"),
-    "0": ("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
-    "1": ("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
-    "2": ("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
-    "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
-    "4": ("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
-    "5": ("11111", "10000", "10000", "11110", "00001", "00001", "11110"),
-    "6": ("01110", "10000", "10000", "11110", "10001", "10001", "01110"),
-    "7": ("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
-    "8": ("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
-    "9": ("01110", "10001", "10001", "01111", "00001", "00001", "01110"),
-    "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
-    "B": ("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
-    "C": ("01111", "10000", "10000", "10000", "10000", "10000", "01111"),
-    "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
-    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
-    "F": ("11111", "10000", "10000", "11110", "10000", "10000", "10000"),
-    "G": ("01111", "10000", "10000", "10111", "10001", "10001", "01110"),
-    "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
-    "I": ("01110", "00100", "00100", "00100", "00100", "00100", "01110"),
-    "J": ("00001", "00001", "00001", "00001", "10001", "10001", "01110"),
-    "K": ("10001", "10010", "10100", "11000", "10100", "10010", "10001"),
-    "L": ("10000", "10000", "10000", "10000", "10000", "10000", "11111"),
-    "M": ("10001", "11011", "10101", "10101", "10001", "10001", "10001"),
-    "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
-    "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
-    "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
-    "Q": ("01110", "10001", "10001", "10001", "10101", "10010", "01101"),
-    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
-    "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
-    "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
-    "U": ("10001", "10001", "10001", "10001", "10001", "10001", "01110"),
-    "V": ("10001", "10001", "10001", "10001", "10001", "01010", "00100"),
-    "W": ("10001", "10001", "10001", "10101", "10101", "10101", "01010"),
-    "X": ("10001", "10001", "01010", "00100", "01010", "10001", "10001"),
-    "Y": ("10001", "10001", "01010", "00100", "00100", "00100", "00100"),
-    "Z": ("11111", "00001", "00010", "00100", "01000", "10000", "11111"),
+    " ": ("0",) * 5,
+    "-": ("000", "000", "111", "000", "000"),
+    ".": ("0", "0", "0", "0", "1"),
+    "/": ("00001", "00010", "00100", "01000", "10000"),
+    "0": ("01110", "10001", "10001", "10001", "01110"),
+    "1": ("11", "01", "01", "01", "01"),
+    "2": ("0110", "1001", "0010", "0100", "1111"),
+    "3": ("1111", "0001", "0111", "0001", "1111"),
+    "4": ("1001", "1001", "1111", "0001", "0001"),
+    "5": ("0111", "1000", "1111", "0001", "1111"),
+    "6": ("1111", "1000", "1111", "1001", "1111"),
+    "7": ("1111", "0001", "0010", "0100", "1000"),
+    "8": ("1111", "1001", "0110", "1001", "1111"),
+    "9": ("1111", "1001", "1111", "0001", "1111"),
+    "A": ("11111", "10001", "11111", "10001", "10001"),
+    "B": ("11110", "10001", "11111", "10001", "11110"),
+    "C": ("11111", "10000", "10000", "10000", "11111"),
+    "D": ("11110", "10001", "10001", "10001", "11110"),
+    "E": ("11111", "10000", "11110", "10000", "11111"),
+    "F": ("11111", "10000", "11110", "10000", "10000"),
+    "G": ("11111", "10000", "10111", "10001", "11111"),
+    "H": ("10001", "10001", "11111", "10001", "10001"),
+    "I": ("11111", "00100", "00100", "00100", "11111"),
+    "J": ("1111", "0010", "0010", "1010", "1110"),
+    "K": ("1001", "1010", "1100", "1010", "1001"),
+    "L": ("1000", "1000", "1000", "1000", "1111"),
+    "M": ("10001", "11011", "10101", "10001", "10001"),
+    "N": ("10001", "11001", "10101", "10011", "10001"),
+    "O": ("11111", "10001", "10001", "10001", "11111"),
+    "P": ("11111", "10001", "11111", "10000", "10000"),
+    "Q": ("11111", "10001", "10001", "10011", "11111"),
+    "R": ("11111", "10001", "11111", "10010", "10001"),
+    "S": ("11111", "10000", "11111", "00001", "11111"),
+    "T": ("11111", "00100", "00100", "00100", "00100"),
+    "U": ("10001", "10001", "10001", "10001", "11111"),
+    "V": ("10001", "10001", "01010", "01010", "00100"),
+    "W": ("10001", "10001", "10001", "10101", "11011"),
+    "X": ("10001", "01010", "00100", "01010", "10001"),
+    "Y": ("10001", "01010", "00100", "00100", "00100"),
+    "Z": ("11111", "00010", "00100", "01000", "11111"),
 }
-
-MINI_GLYPHS: dict[str, tuple[str, ...]] = {
-    " ": ("000",) * 5, "-": ("000", "000", "111", "000", "000"),
-    ".": ("000", "000", "000", "000", "010"),
-    "/": ("001", "001", "010", "100", "100"),
-    "0": ("111", "101", "101", "101", "111"), "1": ("010", "110", "010", "010", "111"),
-    "2": ("110", "001", "010", "100", "111"), "3": ("110", "001", "010", "001", "110"),
-    "4": ("101", "101", "111", "001", "001"), "5": ("111", "100", "110", "001", "110"),
-    "6": ("011", "100", "111", "101", "111"), "7": ("111", "001", "010", "010", "010"),
-    "8": ("111", "101", "111", "101", "111"), "9": ("111", "101", "111", "001", "110"),
-    "A": ("010", "101", "111", "101", "101"), "B": ("110", "101", "110", "101", "110"),
-    "C": ("011", "100", "100", "100", "011"), "D": ("110", "101", "101", "101", "110"),
-    "E": ("111", "100", "110", "100", "111"), "F": ("111", "100", "110", "100", "100"),
-    "G": ("011", "100", "101", "101", "011"), "H": ("101", "101", "111", "101", "101"),
-    "I": ("111", "010", "010", "010", "111"), "J": ("001", "001", "001", "101", "010"),
-    "K": ("101", "101", "110", "101", "101"), "L": ("100", "100", "100", "100", "111"),
-    "M": ("101", "111", "111", "101", "101"), "N": ("101", "111", "111", "111", "101"),
-    "O": ("010", "101", "101", "101", "010"), "P": ("110", "101", "110", "100", "100"),
-    "Q": ("010", "101", "101", "111", "011"), "R": ("110", "101", "110", "101", "101"),
-    "S": ("011", "100", "010", "001", "110"), "T": ("111", "010", "010", "010", "010"),
-    "U": ("101", "101", "101", "101", "111"), "V": ("101", "101", "101", "101", "010"),
-    "W": ("101", "101", "111", "111", "101"), "X": ("101", "101", "010", "101", "101"),
-    "Y": ("101", "101", "010", "010", "010"), "Z": ("111", "001", "010", "100", "111"),
-}
-
 
 def _text_width(text: str) -> int:
     if not text:
         return 0
-    advances = sum(3 if character == "." else 6 for character in text[:-1])
-    final_width = 3 if text[-1] == "." else 5
-    return advances + final_width
+    glyphs = [GLYPHS.get(character, GLYPHS[" "]) for character in text.upper()]
+    return sum(len(glyph[0]) + 1 for glyph in glyphs[:-1]) + len(glyphs[-1][0])
 
 
 def _fit_text(text: str, width: int) -> str:
@@ -180,24 +144,7 @@ def _draw_text(
             for column_index, pixel in enumerate(row):
                 if pixel == "1":
                     draw.point((glyph_x + column_index, start_y + row_index), fill=fill)
-        glyph_x += 3 if character == "." else 6
-
-
-def _draw_mini_text(
-    draw: ImageDraw.ImageDraw,
-    position: tuple[int, int],
-    text: str,
-    fill: tuple[int, int, int],
-) -> None:
-    start_x, start_y = position
-    glyph_x = start_x
-    for character in text.upper():
-        glyph = MINI_GLYPHS.get(character, MINI_GLYPHS[" "])
-        for row_index, row in enumerate(glyph):
-            for column_index, pixel in enumerate(row):
-                if pixel == "1":
-                    draw.point((glyph_x + column_index, start_y + row_index), fill=fill)
-        glyph_x += 2 if character == "." else 4
+        glyph_x += len(glyph[0]) + 1
 
 
 def _scroll_offset(
@@ -248,7 +195,7 @@ def _paste_text_strip(
 
 
 def _text_strip(text: str, fill: tuple[int, int, int]) -> Image.Image:
-    strip = Image.new("RGB", (max(1, _text_width(text)), 7), (0, 0, 0))
+    strip = Image.new("RGB", (max(1, _text_width(text)), 5), (0, 0, 0))
     _draw_text(ImageDraw.Draw(strip), (0, 0), text, fill)
     return strip
 
@@ -268,24 +215,12 @@ def _draw_route_bullet(
     draw: ImageDraw.ImageDraw,
     position: tuple[int, int],
     fill: tuple[int, int, int],
+    pattern: tuple[str, ...] = ROUTE_BULLET,
 ) -> None:
     start_x, start_y = position
-    for row_index, row in enumerate(ROUTE_BULLET):
+    for row_index, row in enumerate(pattern):
         for column_index, pixel in enumerate(row):
             if pixel == "1":
-                draw.point((start_x + column_index, start_y + row_index), fill=fill)
-
-
-def _draw_route_glyph(
-    draw: ImageDraw.ImageDraw,
-    position: tuple[int, int],
-    character: str,
-    fill: tuple[int, int, int],
-) -> None:
-    start_x, start_y = position
-    for row_index, row in enumerate(ROUTE_GLYPHS[character]):
-        for column_index in range(5):
-            if row & (1 << column_index):
                 draw.point((start_x + column_index, start_y + row_index), fill=fill)
 
 
@@ -357,7 +292,7 @@ def render_board(
     header_width = _text_width(station_name)
     if station_context:
         header_width += header_gap + _text_width(station_context)
-    header_strip = Image.new("RGB", (max(1, header_width), 7), (0, 0, 0))
+    header_strip = Image.new("RGB", (max(1, header_width), 5), (0, 0, 0))
     header_draw = ImageDraw.Draw(header_strip)
     _draw_text(header_draw, (0, 0), station_name, STATION_COLOR)
     if station_context:
@@ -379,7 +314,7 @@ def render_board(
     _paste_text_strip(
         image,
         header_strip,
-        (1, 2),
+        (1, 3),
         header_viewport_width,
         current,
         state.updated_at or current,
@@ -397,23 +332,17 @@ def render_board(
         # A hand-tuned 9x9 silhouette stays circular on the coarse LED grid.
         y = 10 + index * 11
         color = ROUTE_COLORS.get(arrival.route, (128, 129, 131))
-        _draw_route_bullet(draw, (1, y), color)
         route_label = arrival.route[:2]
-        if len(route_label) == 1 and route_label in ROUTE_GLYPHS:
-            _draw_route_glyph(
-                draw,
-                (3, y + 2),
-                route_label,
-                _route_text_color(arrival.route),
-            )
-        else:
-            route_width = len(route_label) * 4 - 1
-            _draw_mini_text(
-                draw,
-                (1 + (9 - route_width) // 2, y + 2),
-                route_label,
-                _route_text_color(arrival.route),
-            )
+        badge_pattern = ROUTE_BULLET if len(route_label) == 1 else ROUTE_PILL
+        badge_width = len(badge_pattern[0])
+        _draw_route_bullet(draw, (1, y), color, badge_pattern)
+        route_width = _text_width(route_label)
+        _draw_text(
+            draw,
+            (1 + (badge_width - route_width) // 2, y + 2),
+            route_label,
+            _route_text_color(arrival.route),
+        )
         countdown = _countdown(arrival, current)
         countdown_width = _text_width(countdown)
         countdown_x = config.display.width - 1 - countdown_width
@@ -426,14 +355,14 @@ def render_board(
         _paste_text_strip(
             image,
             _text_strip(destination, (255, 255, 255)),
-            (DESTINATION_X, y + 1),
+            (DESTINATION_X, y + 2),
             destination_width,
             current,
             state.updated_at or current,
             synchronized_overflow_width,
             config.display.scrolling,
         )
-        _draw_text(draw, (countdown_x, y + 1), countdown, (252, 204, 10))
+        _draw_text(draw, (countdown_x, y + 2), countdown, (252, 204, 10))
 
     if degraded:
         status_y = 21
