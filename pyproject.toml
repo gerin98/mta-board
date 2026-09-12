@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mta-board = "mta_board.__main__:main"
+mta-board = "mta_board_cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

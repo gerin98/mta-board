@@ -25,110 +25,42 @@ python -m pip install -e .
 mta-board preview
 ```
 
-The preview opens at <http://127.0.0.1:8000>. It downloads the official static MTA subway GTFS data on first use, caches station names in `~/.cache/mta-board`, and polls realtime data every 30 seconds.
-
-## CLI reference
-
-| Command | Purpose | Example |
-| --- | --- | --- |
-| `stations` | Search stations by name, ID, borough, route, or direction | `mta-board stations "59 lex 6"` |
-| `lines` | Search routes and their MTA corridors | `mta-board lines Lexington` |
-| `configure` | Persist the station, routes, direction, and scrolling preference | `mta-board configure --station 629 --routes 6 --direction S` |
-| `preview` | Run the live browser preview; flags are temporary overrides | `mta-board preview --station R09 --routes N,W --direction S` |
-| `snapshot` | Save one 128×32 PNG frame | `mta-board snapshot --demo --output preview.png` |
-| `check` | Verify the live MTA feed and optionally require matching arrivals | `mta-board check --station 127 --routes 1,2,3 --direction N` |
-| `run` | Drive the physical HUB75 matrix | `sudo mta-board run --renderer matrix` |
-
-Run `mta-board COMMAND --help` for all options. Commands use `config.toml` by default; pass `--config PATH` to `configure`, `preview`, `snapshot`, `check`, or `run` to use another file.
-
-The `check` command fails on network, HTTP, or feed-parsing errors. An empty but valid feed is healthy by default because service varies by time of day; add `--require-arrivals` when you specifically expect matching trains.
-
-Long headers and destinations pause, scroll to the end, pause, and repeat. Persistently disable or enable the marquee with `mta-board configure --no-scroll` or `mta-board configure --scroll`; use the same flags with `preview` for a temporary override.
-
-To test without network access:
-
-```sh
-mta-board preview --demo
-```
-
-To create one raw 128×32 frame:
-
-```sh
-mta-board snapshot --demo --output preview.png
-```
-
-## Configure it
-
-Show the saved setup or update it using a station ID or unique search:
-
-```sh
-mta-board configure
-mta-board configure --station "broadway astoria" --routes N,W --direction S
-```
-
-This writes `config.toml`. You can also edit it directly; station IDs must omit the direction suffix:
-
-```toml
-[board]
-station_id = "R05"
-routes = ["N", "W"]
-direction = "S"
-minimum_lead_minutes = 0
-max_arrivals = 2
-```
-
-Settings can be temporarily overridden without editing the file:
-
-```sh
-mta-board preview --station R05 --routes N,W --direction S --minimum-lead 5
-```
-
-### Find a station
-
-The bundled catalog includes all 496 MTA subway and Staten Island Railway station records. Search by station name, borough, line, route, direction label, or ID:
-
-```sh
-mta-board stations broadway
-mta-board stations "broadway astoria"
-mta-board stations queens N
-mta-board stations 6
-mta-board lines N
-mta-board lines Lexington
-```
-
-Results show the GTFS ID, routes, and rider-facing meaning of each direction. A unique search can also be used directly:
-
-```sh
-mta-board preview --station "broadway astoria" --routes N,W --direction S
-```
-
-Ambiguous searches stop and print matching IDs rather than silently selecting the wrong station. The bundled catalog can be refreshed from the official NY Open Data dataset with:
-
-```sh
-python scripts/update_station_catalog.py
-```
-
-`N` and `S` are internal GTFS direction codes, not necessarily geographic north and south. Search results show rider-facing labels such as Uptown, Downtown, Queens, Manhattan, or Westbound.
-
-MTA subway stop IDs and route metadata come from the [official static GTFS feed](https://www.mta.info/developers). The application automatically selects the appropriate realtime feed for the configured routes.
+The preview opens at <http://127.0.0.1:8000>. See the [CLI guide](cli/README.md) for station lookup, configuration, snapshots, feed checks, demo mode, and the complete command reference.
 
 ## Run the physical board
 
 The intended hardware is an original Pi Zero W, an Adafruit RGB Matrix Bonnet, and two horizontally chained 64×32 HUB75 panels. Use Raspberry Pi OS Lite 32-bit based on Bookworm or newer.
 
-First verify the matrix using the upstream examples. Then install the Python bindings and this project:
+### Prepare the Raspberry Pi
+
+1. Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to write Raspberry Pi OS Lite (32-bit) to the microSD card.
+2. In Imager's OS customization screen, set a hostname, username, password, and Wi-Fi network, then enable SSH. A hostname such as `mta-board` makes the Pi easy to find.
+3. Insert the card, start the Pi, allow a minute or two for its first boot, and connect from another computer:
+
+   ```sh
+   ssh YOUR_USERNAME@mta-board.local
+   ```
+
+   Replace `YOUR_USERNAME` with the username selected in Imager. If the hostname does not resolve, use the Pi's IP address instead of `mta-board.local`.
+
+4. On the Pi, install Git, download this repository, and run the installer:
+
+   ```sh
+   sudo apt update
+   sudo apt install -y git
+   git clone https://github.com/gerin98/mta-board.git
+   cd mta-board
+   sudo ./scripts/install_pi.sh
+   ```
+
+The installer adds the OS dependencies, deploys the project to `/opt/mta-board`, builds a pinned version of the upstream matrix driver, installs the systemd service, and starts the board. It preserves an existing `/opt/mta-board/config.toml`, so it is safe to run again when updating the software.
+
+Use `sudo ./scripts/install_pi.sh --no-start` when preparing the Pi before the panels are connected. Use `./scripts/install_pi.sh --dry-run` to print every planned command without changing the system.
+
+After installation, confirm that the service is running:
 
 ```sh
-sudo apt update
-sudo apt install -y git build-essential python3-dev python3-venv python3-pil cython3
-git clone https://github.com/hzeller/rpi-rgb-led-matrix.git
-cd rpi-rgb-led-matrix
-make build-python PYTHON=$(command -v python3)
-sudo make install-python PYTHON=$(command -v python3)
-cd /opt/mta-board
-python3 -m venv --system-site-packages .venv
-.venv/bin/python -m pip install -e .
-sudo .venv/bin/mta-board run --renderer matrix --config config.toml
+sudo systemctl status --no-pager mta-board
 ```
 
 The physical driver uses:
@@ -142,15 +74,9 @@ The physical driver uses:
 
 If the panel shows corruption, change `gpio_slowdown` in `config.toml` one step at a time. Do not increase brightness until the display is stable and adequately powered.
 
-### Start at boot
+### Service and logs
 
-After installing the project at `/opt/mta-board`:
-
-```sh
-sudo cp deploy/mta-board.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now mta-board
-```
+The installer enables the board service at boot automatically.
 
 Inspect logs with:
 
@@ -165,6 +91,14 @@ sudo /opt/mta-board/.venv/bin/mta-board configure \
   --config /opt/mta-board/config.toml \
   --station "broadway astoria" --routes N,W --direction S
 sudo systemctl restart mta-board
+```
+
+To install a later version, update the checkout and rerun the same installer:
+
+```sh
+cd ~/mta-board
+git pull
+sudo ./scripts/install_pi.sh
 ```
 
 The matrix driver requires elevated GPIO access; its upstream runtime initializes the hardware and then drops privileges where supported.

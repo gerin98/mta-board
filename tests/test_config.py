@@ -7,8 +7,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from mta_board.__main__ import configure_board
 from mta_board.config import load_config, save_config
+from mta_board_cli.main import configure_board
 
 
 class ConfigTests(unittest.TestCase):

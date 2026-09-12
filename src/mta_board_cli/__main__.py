@@ -1,10 +1,8 @@
-"""Compatibility entry point for ``python -m mta_board``."""
-
 from __future__ import annotations
 
 import sys
 
-from mta_board_cli.main import main
+from .main import main
 
 
 if __name__ == "__main__":

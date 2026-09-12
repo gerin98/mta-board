@@ -5,8 +5,8 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 
-from mta_board.__main__ import check_feed
 from mta_board.models import Arrival, BoardState
+from mta_board_cli.main import check_feed
 
 
 class FakeService:

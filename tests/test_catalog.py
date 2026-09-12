@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 from mta_board.catalog import load_catalog, resolve_station, search_lines, search_stations
-from mta_board.__main__ import list_stations
+from mta_board_cli.main import list_stations
 
 
 class CatalogTests(unittest.TestCase):
