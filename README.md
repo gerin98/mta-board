@@ -23,9 +23,29 @@ mta-board preview
 
 The preview opens at <http://127.0.0.1:8000>. See the [CLI guide](cli/README.md) for station lookup, configuration, snapshots, feed checks, demo mode, and the complete command reference.
 
+## Hardware
+
+No hardware is required for the browser preview. The recommended physical build uses two 64×32 panels to create one 128×32 display, giving station names and destinations enough horizontal space while remaining compact.
+
+| Component | Quantity | Why it is needed | Estimated cost |
+| --- | ---: | --- | ---: |
+| Raspberry Pi Zero 2 W with soldered 40-pin header | 1 | Runs the application, downloads MTA data over Wi-Fi, and controls the display. An original Pi Zero W also works, but is slower. | $20–30 |
+| Adafruit RGB Matrix Bonnet | 1 | Connects the Pi's GPIO header to HUB75 panels and provides the required logic-level conversion. | $15 |
+| 64×32 HUB75 RGB LED panel, 3 mm pitch | 2 | Chain horizontally to form the 128×32 display. Matching panel models are strongly recommended. | $90 total |
+| Regulated 5V 10A power supply | 1 | Provides enough 5V current for both LED panels. A normal Pi USB adapter cannot power the panels safely. | $30 |
+| 32GB A2 microSD card | 1 | Stores Raspberry Pi OS and the board software. | $10–15 |
+| HUB75 ribbon and panel power cables | 1 set | Carry display data and distribute 5V power to both panels. These often ship with the panels; verify before ordering. | Usually included |
+| Frame, M3 hardware, and standoffs | 1 set | Secures the panels, protects exposed contacts, and keeps the electronics ventilated. | $20–50 |
+
+The electronics cost approximately **$165–180**, or **$190–230** for a finished build with mounting hardware. Prices exclude tax and shipping.
+
+The CanaKit may already provide the Pi, microSD card, card reader, case, and Pi power adapter; count those parts toward this list. Verify that its Pi has a soldered 40-pin GPIO header before attaching the Bonnet. Even with the CanaKit, the Bonnet, two panels, and dedicated 5V 10A panel supply cost about **$135**, plus approximately **$20–50** for a frame.
+
+See the [detailed shopping list](SHOPPING_LIST.md) for example parts, cable checks, optional additions, and a smaller one-panel alternative.
+
 ## Run the physical board
 
-The intended hardware is an original Pi Zero W, an Adafruit RGB Matrix Bonnet, and two horizontally chained 64×32 HUB75 panels. Use Raspberry Pi OS Lite 32-bit based on Bookworm or newer.
+Assemble the hardware above and use Raspberry Pi OS Lite 32-bit based on Bookworm or newer.
 
 ### Prepare the Raspberry Pi
 
