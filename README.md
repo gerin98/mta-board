@@ -36,9 +36,12 @@ The preview opens at <http://127.0.0.1:8000>. It downloads the official static M
 | `configure` | Persist the station, routes, direction, and scrolling preference | `mta-board configure --station 629 --routes 6 --direction S` |
 | `preview` | Run the live browser preview; flags are temporary overrides | `mta-board preview --station R09 --routes N,W --direction S` |
 | `snapshot` | Save one 128×32 PNG frame | `mta-board snapshot --demo --output preview.png` |
+| `check` | Verify the live MTA feed and optionally require matching arrivals | `mta-board check --station 127 --routes 1,2,3 --direction N` |
 | `run` | Drive the physical HUB75 matrix | `sudo mta-board run --renderer matrix` |
 
-Run `mta-board COMMAND --help` for all options. Commands use `config.toml` by default; pass `--config PATH` to `configure`, `preview`, `snapshot`, or `run` to use another file.
+Run `mta-board COMMAND --help` for all options. Commands use `config.toml` by default; pass `--config PATH` to `configure`, `preview`, `snapshot`, `check`, or `run` to use another file.
+
+The `check` command fails on network, HTTP, or feed-parsing errors. An empty but valid feed is healthy by default because service varies by time of day; add `--require-arrivals` when you specifically expect matching trains.
 
 Long headers and destinations pause, scroll to the end, pause, and repeat. Persistently disable or enable the marquee with `mta-board configure --no-scroll` or `mta-board configure --scroll`; use the same flags with `preview` for a temporary override.
 

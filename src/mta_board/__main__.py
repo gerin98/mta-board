@@ -59,6 +59,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(snapshot)
     snapshot.add_argument("--output", default="preview.png")
 
+    check = subparsers.add_parser("check", help="verify access to the MTA live feed")
+    _add_common(check)
+    check.add_argument(
+        "--require-arrivals",
+        action="store_true",
+        help="fail if the feed contains no matching upcoming trains",
+    )
+
     run = subparsers.add_parser("run", help="run the physical LED matrix")
     _add_common(run)
     run.add_argument("--renderer", choices=("matrix",), default="matrix")
@@ -136,6 +144,23 @@ def _canonical_route(route: str, station: Station) -> str:
     return route
 
 
+def check_feed(service: BoardService, require_arrivals: bool = False) -> None:
+    service.update()
+    state = service.state()
+    if state.error:
+        raise RuntimeError(f"MTA feed check failed: {state.error}")
+    if require_arrivals and not state.arrivals:
+        raise RuntimeError("MTA feed check returned no matching upcoming trains")
+
+    route_summary = ", ".join(state.routes)
+    print(
+        f"MTA feed OK: {state.station_name} "
+        f"({route_summary}, direction {state.direction}) — {len(state.arrivals)} arrivals"
+    )
+    for arrival in state.arrivals:
+        print(f"  {arrival.route} to {arrival.destination} at {arrival.arrival_time.isoformat()}")
+
+
 def configure_board(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     changing = any(
@@ -198,6 +223,8 @@ def main(argv: list[str] | None = None) -> int:
             output = Path(args.output)
             service.frame().save(output, format="PNG")
             print(f"Wrote {output} ({config.display.width}x{config.display.height})")
+        elif args.command == "check":
+            check_feed(service, require_arrivals=args.require_arrivals)
         elif args.command == "run":
             run_matrix(service, config)
         return 0
