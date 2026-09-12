@@ -41,6 +41,7 @@ SCROLL_END_PAUSE_SECONDS = 2
 HEADER_GAP = 4
 DESTINATION_X = 13
 COUNTDOWN_LEFT_GAP = 4
+ROUTE_LABEL_X_OFFSETS = {"2": 1}
 ROUTE_BULLET = (
     "001111100",
     "011111110",
@@ -339,7 +340,12 @@ def render_board(
         route_width = _text_width(route_label)
         _draw_text(
             draw,
-            (1 + (badge_width - route_width) // 2, y + 2),
+            (
+                1
+                + (badge_width - route_width) // 2
+                + ROUTE_LABEL_X_OFFSETS.get(route_label, 0),
+                y + 2,
+            ),
             route_label,
             _route_text_color(arrival.route),
         )

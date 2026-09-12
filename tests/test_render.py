@@ -174,6 +174,24 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(frame.getpixel((1, 10)), (0, 0, 0))
         self.assertEqual(frame.getpixel((3, 10)), ROUTE_COLORS["FX"])
 
+    def test_route_two_is_optically_centered_in_bullet(self) -> None:
+        now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
+        state = BoardState(
+            station_id="127",
+            station_name="Times Sq-42 St",
+            direction="N",
+            routes=("2",),
+            arrivals=(Arrival("2", "Wakefield-241 St", now + timedelta(minutes=3)),),
+            updated_at=now,
+        )
+
+        frame = render_board(state, AppConfig(), now=now)
+
+        # The even-width glyph is shifted right one pixel for visual balance.
+        self.assertEqual(frame.getpixel((4, 16)), (255, 255, 255))
+        self.assertEqual(frame.getpixel((7, 16)), (255, 255, 255))
+        self.assertNotEqual(frame.getpixel((3, 16)), (255, 255, 255))
+
     def test_route_bullet_has_a_round_pixel_silhouette(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
         state = BoardState(
