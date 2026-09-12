@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import errno
 import io
 import json
 import webbrowser
 from datetime import datetime, timezone
+from http.client import HTTPConnection, HTTPException
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .catalog import resolve_station
 from .service import BoardService
+
+PREVIEW_HEADER = "X-MTA-Board-Preview"
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -109,6 +113,7 @@ def make_handler(service: BoardService) -> type[BaseHTTPRequestHandler]:
 
         def _send(self, content: bytes, content_type: str, no_cache: bool = False) -> None:
             self.send_response(HTTPStatus.OK)
+            self.send_header(PREVIEW_HEADER, "1")
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(content)))
             if no_cache:
@@ -126,10 +131,61 @@ def make_handler(service: BoardService) -> type[BaseHTTPRequestHandler]:
     return PreviewHandler
 
 
+def _loopback_host(host: str) -> str:
+    if host == "0.0.0.0":
+        return "127.0.0.1"
+    if host == "::":
+        return "::1"
+    return host
+
+
+def _preview_url(host: str, port: int) -> str:
+    display_host = _loopback_host(host)
+    if ":" in display_host and not display_host.startswith("["):
+        display_host = f"[{display_host}]"
+    return f"http://{display_host}:{port}"
+
+
+def _is_mta_board_preview(host: str, port: int) -> bool:
+    connection = HTTPConnection(_loopback_host(host), port, timeout=1)
+    try:
+        connection.request("GET", "/api/status")
+        response = connection.getresponse()
+        content = response.read()
+        if response.status != HTTPStatus.OK:
+            return False
+        if response.getheader(PREVIEW_HEADER) == "1":
+            return True
+        # Recognize preview servers started before the identifying header was added.
+        payload = json.loads(content)
+        expected_fields = {
+            "station_id",
+            "station_name",
+            "direction",
+            "routes",
+            "arrival_count",
+            "live",
+        }
+        return isinstance(payload, dict) and expected_fields.issubset(payload)
+    except (HTTPException, json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return False
+    finally:
+        connection.close()
+
+
 def serve_preview(service: BoardService, host: str, port: int, open_browser: bool = True) -> None:
+    url = _preview_url(host, port)
+    try:
+        server = ThreadingHTTPServer((host, port), make_handler(service))
+    except OSError as exc:
+        if exc.errno == errno.EADDRINUSE and _is_mta_board_preview(host, port):
+            print(f"MTA board preview already running: {url}")
+            if open_browser:
+                webbrowser.open(url)
+            return
+        raise
+
     service.start()
-    server = ThreadingHTTPServer((host, port), make_handler(service))
-    url = f"http://{host}:{port}"
     print(f"MTA board preview: {url}")
     if open_browser:
         webbrowser.open(url)

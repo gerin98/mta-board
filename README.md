@@ -8,11 +8,7 @@ A configurable NYC subway arrival board with a pixel-accurate browser preview an
 
 The layout shows the station name and next two trains using Adam Bjornson's monospaced Pixel Five font, official route colors, destinations, and countdowns. Live MTA subway data does not require an API key.
 
-The included configuration tracks Manhattan-bound N/W trains at Broadway in Astoria:
-
-- Station: `R05` (Broadway)
-- Direction: `S` (southbound/Manhattan-bound)
-- Realtime feed: MTA `gtfs-nqrw`
+The station, routes, travel direction, arrival cutoff, brightness, and scrolling behavior are all configurable. The application selects the appropriate MTA realtime feed automatically.
 
 ## Run the virtual board
 
@@ -89,7 +85,7 @@ To change a deployed board, SSH into the Pi, update its saved configuration, and
 ```sh
 sudo /opt/mta-board/.venv/bin/mta-board configure \
   --config /opt/mta-board/config.toml \
-  --station "broadway astoria" --routes N,W --direction S
+  --station 127 --routes 1,2,3 --direction N
 sudo systemctl restart mta-board
 ```
 

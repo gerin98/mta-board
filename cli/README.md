@@ -20,8 +20,8 @@ Run `mta-board COMMAND --help` to see every option for a command.
 | --- | --- | --- |
 | `stations` | Search stations by name, ID, borough, route, or direction | `mta-board stations "59 lex 6"` |
 | `lines` | Search routes and their MTA corridors | `mta-board lines Lexington` |
-| `configure` | Show or persist the board configuration | `mta-board configure --station 629 --routes 6 --direction S` |
-| `preview` | Run the live browser preview | `mta-board preview --station R09 --routes N,W --direction S` |
+| `configure` | Show or persist the board configuration | `mta-board configure --station 127 --routes 1,2,3 --direction N` |
+| `preview` | Run the live browser preview | `mta-board preview --station 127 --routes 1,2,3 --direction N` |
 | `snapshot` | Save one 128×32 PNG frame | `mta-board snapshot --demo --output preview.png` |
 | `check` | Verify access to the live MTA feed | `mta-board check --station 127 --routes 1,2,3 --direction N` |
 | `run` | Drive the physical HUB75 matrix | `sudo mta-board run --renderer matrix` |
@@ -33,9 +33,9 @@ Commands use `config.toml` by default. Pass `--config PATH` to `configure`, `pre
 The bundled catalog includes all current MTA subway and Staten Island Railway station records. Search by station name, borough, corridor, route, direction label, or ID:
 
 ```sh
-mta-board stations broadway
-mta-board stations "broadway astoria"
-mta-board stations queens N
+mta-board stations "times sq"
+mta-board stations "times sq 2 3"
+mta-board stations manhattan N
 mta-board stations 6
 mta-board lines N
 mta-board lines Lexington
@@ -51,16 +51,16 @@ Show the current setup or update it using a station ID or unique search:
 
 ```sh
 mta-board configure
-mta-board configure --station "broadway astoria" --routes N,W --direction S
+mta-board configure --station 127 --routes 1,2,3 --direction N
 ```
 
 This writes `config.toml`. You can also edit the file directly; station IDs must omit the direction suffix:
 
 ```toml
 [board]
-station_id = "R05"
-routes = ["N", "W"]
-direction = "S"
+station_id = "127"
+routes = ["1", "2", "3"]
+direction = "N"
 minimum_lead_minutes = 0
 max_arrivals = 2
 ```
@@ -75,10 +75,12 @@ Start the browser preview with the saved configuration:
 mta-board preview
 ```
 
+If a preview is already running on that address, the command opens the existing board instead of starting a duplicate server.
+
 Flags on `preview` temporarily override the saved setup:
 
 ```sh
-mta-board preview --station R05 --routes N,W --direction S --minimum-lead 5
+mta-board preview --station 127 --routes 1,2,3 --direction N --minimum-lead 5
 ```
 
 Use deterministic sample arrivals when working offline, or render a single raw frame:
