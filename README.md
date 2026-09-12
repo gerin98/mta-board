@@ -1,6 +1,6 @@
 # MTA LED Arrival Board
 
-![59 St Lexington Avenue 6 arrival board preview](docs/59-st-lexington-preview.png)
+![Times Square 1 and 2 arrival board preview](docs/times-square-preview.png)
 
 A configurable NYC subway arrival board with a pixel-accurate browser preview and an optional 128×32 HUB75 LED matrix output.
 
