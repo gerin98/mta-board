@@ -1,0 +1,8 @@
+Pixel Five
+Copyright Adam Bjornson
+
+The bitmap glyph data in src/mta_board/render.py is derived from version 1.013
+of the Pixel Five font. The author distributes the font as open source under
+an MIT-style license, free for any use.
+
+Source: https://bitfume.com/tools/fonts/pixel-five/

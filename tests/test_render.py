@@ -46,8 +46,11 @@ class RenderTests(unittest.TestCase):
             ("BROADWAY", "MANHATTAN"),
         )
 
-    def test_ellipsis_dots_are_tightly_spaced(self) -> None:
-        self.assertEqual(_text_width("..."), 5)
+    def test_font_uses_fixed_five_pixel_cells(self) -> None:
+        self.assertEqual(_text_width("2"), 5)
+        self.assertEqual(_text_width("W"), 5)
+        self.assertEqual(_text_width(" "), 5)
+        self.assertEqual(_text_width("..."), 17)
 
     def test_long_text_scrolls_and_toggle_can_freeze_it(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
@@ -174,7 +177,7 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(frame.getpixel((1, 10)), (0, 0, 0))
         self.assertEqual(frame.getpixel((3, 10)), ROUTE_COLORS["FX"])
 
-    def test_route_two_is_optically_centered_in_bullet(self) -> None:
+    def test_route_two_uses_centered_fixed_width_cell(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
         state = BoardState(
             station_id="127",
@@ -187,10 +190,9 @@ class RenderTests(unittest.TestCase):
 
         frame = render_board(state, AppConfig(), now=now)
 
-        # The even-width glyph is shifted right one pixel for visual balance.
-        self.assertEqual(frame.getpixel((4, 16)), (255, 255, 255))
+        # Every glyph occupies a centered five-pixel cell.
+        self.assertEqual(frame.getpixel((3, 16)), (255, 255, 255))
         self.assertEqual(frame.getpixel((7, 16)), (255, 255, 255))
-        self.assertNotEqual(frame.getpixel((3, 16)), (255, 255, 255))
 
     def test_route_bullet_has_a_round_pixel_silhouette(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
