@@ -52,6 +52,10 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(_text_width(" "), 5)
         self.assertEqual(_text_width("..."), 17)
 
+    def test_words_have_three_blank_columns_between_them(self) -> None:
+        self.assertEqual(_text_width("AA"), 11)
+        self.assertEqual(_text_width("A A"), 13)
+
     def test_long_text_scrolls_and_toggle_can_freeze_it(self) -> None:
         now = datetime(2026, 9, 7, 16, 0, tzinfo=timezone.utc)
         state = BoardState(

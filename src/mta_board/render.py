@@ -112,11 +112,19 @@ GLYPHS: dict[str, tuple[str, ...]] = {
     "Z": ("11111", "00010", "00100", "01000", "11111"),
 }
 
+
+def _glyph_advance(character: str) -> int:
+    # A full monospaced space creates a six-pixel hole on this tiny display.
+    # Two pixels of advance plus the previous glyph's trailing column produces
+    # a more readable three-pixel gap between words.
+    return 2 if character == " " else 6
+
+
 def _text_width(text: str) -> int:
     if not text:
         return 0
-    glyphs = [GLYPHS.get(character, GLYPHS[" "]) for character in text.upper()]
-    return sum(len(glyph[0]) + 1 for glyph in glyphs[:-1]) + len(glyphs[-1][0])
+    text = text.upper()
+    return sum(_glyph_advance(character) for character in text[:-1]) + 5
 
 
 def _fit_text(text: str, width: int) -> str:
@@ -144,7 +152,7 @@ def _draw_text(
             for column_index, pixel in enumerate(row):
                 if pixel == "1":
                     draw.point((glyph_x + column_index, start_y + row_index), fill=fill)
-        glyph_x += len(glyph[0]) + 1
+        glyph_x += _glyph_advance(character)
 
 
 def _scroll_offset(
